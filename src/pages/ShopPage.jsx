@@ -44,8 +44,16 @@ const ShopPage = () => {
       if (!response.ok) throw new Error('Failed to fetch products');
 
       const data = await response.json();
-      setProducts(data.products || []);
-      setTotalPages(Math.ceil((data.total || 12) / 12));
+      const nextProducts = data.products || [];
+      setProducts(nextProducts);
+
+      const apiTotalPages = Number(data.totalPages);
+      if (apiTotalPages && apiTotalPages > 0) {
+        setTotalPages(apiTotalPages);
+      } else {
+        const total = Number(data.total) || nextProducts.length || 0;
+        setTotalPages(Math.max(1, Math.ceil(total / 12)));
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Failed to load products');

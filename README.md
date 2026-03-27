@@ -11,4 +11,4 @@ Frontend-only repo extracted from the original monorepo (`apps/web`).
 
 ## Environment
 
-- `VITE_API_BASE_URL` (optional): API server base URL (defaults to `http://localhost:3001`).
+- `VITE_API_BASE_URL` (optional): API server base URL (defaults to `http://localhost:3001` in dev, `https://api-layer.anfastyles.shop` in production builds).
