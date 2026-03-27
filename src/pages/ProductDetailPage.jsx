@@ -31,10 +31,22 @@ const ProductDetailPage = () => {
   const fetchProduct = async () => {
     setLoading(true);
     try {
-      const response = await apiServerClient.fetch(`/products/${id}`);
-      if (!response.ok) throw new Error('Product not found');
+      const requestPath = `/products/${id}`;
+      console.log('[product] baseUrl=', apiServerClient.getBaseUrl());
+      console.log('[product] requestUrl=', apiServerClient.buildUrl(requestPath));
 
-      const data = await response.json();
+      const response = await apiServerClient.fetch(requestPath, { credentials: 'omit' });
+      console.log('[product] status=', response.status, response.statusText);
+
+      const raw = await response.text();
+      if (!response.ok) throw new Error(`Product not found (status=${response.status})`);
+
+      let data;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        throw new Error(`Failed to parse product JSON: ${e?.message || e}`);
+      }
       setProduct(data);
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -46,11 +58,24 @@ const ProductDetailPage = () => {
 
   const fetchRelatedProducts = async () => {
     try {
-      const response = await apiServerClient.fetch('/products/featured');
+      const requestPath = '/products/featured';
+      console.log('[related] baseUrl=', apiServerClient.getBaseUrl());
+      console.log('[related] requestUrl=', apiServerClient.buildUrl(requestPath));
+
+      const response = await apiServerClient.fetch(requestPath, { credentials: 'omit' });
+      console.log('[related] status=', response.status, response.statusText);
       if (!response.ok) return;
 
-      const data = await response.json();
-      setRelatedProducts(data.slice(0, 4));
+      const raw = await response.text();
+      let data;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        throw new Error(`Failed to parse related products JSON: ${e?.message || e}`);
+      }
+
+      const products = Array.isArray(data) ? data : data?.products;
+      setRelatedProducts((products || []).slice(0, 4));
     } catch (error) {
       console.error('Error fetching related products:', error);
     }

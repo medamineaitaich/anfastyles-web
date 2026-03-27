@@ -40,10 +40,28 @@ const ShopPage = () => {
         params.append('category', category);
       }
 
-      const response = await apiServerClient.fetch(`/products?${params.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch products');
+      const requestPath = `/products?${params.toString()}`;
+      console.log('[shop] baseUrl=', apiServerClient.getBaseUrl());
+      console.log('[shop] requestUrl=', apiServerClient.buildUrl(requestPath));
 
-      const data = await response.json();
+      const response = await apiServerClient.fetch(requestPath, { credentials: 'omit' });
+      console.log('[shop] status=', response.status, response.statusText);
+
+      const raw = await response.text();
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch products (status=${response.status}) body=${raw.slice(0, 300)}`
+        );
+      }
+
+      let data;
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        throw new Error(`Failed to parse products JSON: ${e?.message || e}`);
+      }
+
+      console.log('[shop] response keys=', Object.keys(data || {}));
       setProducts(data.products || []);
       setTotalPages(Math.ceil((data.total || 12) / 12));
     } catch (error) {
