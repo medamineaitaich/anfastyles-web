@@ -1,5 +1,6 @@
 const getBaseUrl = () => {
-  const envBaseUrl = import.meta?.env?.VITE_API_BASE_URL;
+  const envBaseUrl =
+    import.meta?.env?.VITE_API_URL ?? import.meta?.env?.VITE_API_BASE_URL;
   return (envBaseUrl && String(envBaseUrl).trim()) || 'http://localhost:3001';
 };
 
@@ -23,4 +24,3 @@ const apiServerClient = {
 };
 
 export default apiServerClient;
-
