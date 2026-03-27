@@ -28,7 +28,8 @@ const HomePage = () => {
       const response = await apiServerClient.fetch('/products/featured');
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
-      setFeaturedProducts(data.slice(0, 6));
+      const products = Array.isArray(data) ? data : (data?.products || []);
+      setFeaturedProducts(products.slice(0, 6));
     } catch (error) {
       console.error('Error fetching featured products:', error);
       toast.error('Failed to load products');

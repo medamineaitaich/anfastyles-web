@@ -50,7 +50,8 @@ const ProductDetailPage = () => {
       if (!response.ok) return;
 
       const data = await response.json();
-      setRelatedProducts(data.slice(0, 4));
+      const products = Array.isArray(data) ? data : (data?.products || []);
+      setRelatedProducts(products.slice(0, 4));
     } catch (error) {
       console.error('Error fetching related products:', error);
     }
