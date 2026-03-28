@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Truck, MapPin } from 'lucide-react';
+import { CardElement, Elements, ElementsConsumer } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
+import { fetchWooPaymentsConfig } from '@/lib/wpBridgeClient';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -36,6 +39,9 @@ const CheckoutPage = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [wooPaymentsConfig, setWooPaymentsConfig] = useState(null);
+  const [wooPaymentsLoading, setWooPaymentsLoading] = useState(false);
+  const [wooPaymentsError, setWooPaymentsError] = useState('');
 
   useEffect(() => {
     const savedCart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0}');
@@ -44,6 +50,38 @@ const CheckoutPage = () => {
     }
     setCart(savedCart);
   }, [navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWooPayments = async () => {
+      try {
+        setWooPaymentsError('');
+        setWooPaymentsLoading(true);
+        const data = await fetchWooPaymentsConfig();
+        if (!cancelled) setWooPaymentsConfig(data);
+      } catch (error) {
+        if (!cancelled) setWooPaymentsError(error?.message || 'Failed to load payment configuration');
+      } finally {
+        if (!cancelled) setWooPaymentsLoading(false);
+      }
+    };
+
+    if (step === 3 && formData.paymentMethod === 'credit_card' && !wooPaymentsConfig && !wooPaymentsLoading && !wooPaymentsError) {
+      loadWooPayments();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, formData.paymentMethod, wooPaymentsConfig, wooPaymentsLoading, wooPaymentsError]);
+
+  const stripePromise = useMemo(() => {
+    const publishableKey = wooPaymentsConfig?.config?.publishableKey;
+    const accountId = wooPaymentsConfig?.config?.accountId;
+    if (!publishableKey) return null;
+    return loadStripe(publishableKey, accountId ? { stripeAccount: accountId } : undefined);
+  }, [wooPaymentsConfig]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -75,9 +113,58 @@ const CheckoutPage = () => {
     setStep(step + 1);
   };
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async ({ stripe, elements } = {}) => {
     setLoading(true);
     try {
+      let paymentData = null;
+      let paymentMethodGateway = formData.paymentMethod;
+
+      if (formData.paymentMethod === 'credit_card') {
+        const cardGatewayId = wooPaymentsConfig?.config?.paymentMethodsConfig?.card?.gatewayId;
+        paymentMethodGateway = cardGatewayId || 'woocommerce_payments';
+
+        if (!wooPaymentsConfig?.ok || !wooPaymentsConfig?.isReady) {
+          throw new Error('Payment is not ready. Please try again in a moment.');
+        }
+
+        if (!stripe || !elements) {
+          throw new Error('Payment form is not ready. Please refresh the page and try again.');
+        }
+
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          throw new Error('Payment form is not ready. Please refresh the page and try again.');
+        }
+
+        const { error, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+          billing_details: {
+            name: `${formData.firstName} ${formData.lastName}`.trim(),
+            email: formData.email,
+            phone: formData.phone || undefined,
+            address: {
+              line1: formData.address,
+              city: formData.city,
+              state: formData.state,
+              postal_code: formData.zip,
+              country: formData.country
+            }
+          }
+        });
+
+        if (error) {
+          throw new Error(error.message || 'Payment details are invalid');
+        }
+
+        paymentData = {
+          provider: 'woopayments',
+          gatewayId: paymentMethodGateway,
+          stripePaymentMethodId: paymentMethod?.id || null,
+          testMode: !!wooPaymentsConfig?.config?.testMode
+        };
+      }
+
       const orderData = {
         cartItems: cart.items.map(item => ({
           productId: item.productId,
@@ -96,7 +183,8 @@ const CheckoutPage = () => {
           country: formData.country
         },
         shippingMethod: formData.shippingMethod,
-        paymentMethod: formData.paymentMethod
+        paymentMethod: paymentMethodGateway,
+        paymentData
       };
 
       const response = await apiServerClient.fetch('/orders/create', {
@@ -348,25 +436,72 @@ const CheckoutPage = () => {
                           <p className="text-sm text-muted-foreground">Visa, Mastercard, Amex</p>
                         </Label>
                       </div>
-
-                      <div className="flex items-center gap-3 p-4 border border-border rounded-lg">
-                        <RadioGroupItem value="paypal" id="paypal" />
-                        <Label htmlFor="paypal" className="cursor-pointer">
-                          <p className="font-semibold">PayPal</p>
-                          <p className="text-sm text-muted-foreground">Pay with your PayPal account</p>
-                        </Label>
-                      </div>
                     </div>
                   </RadioGroup>
 
-                  <div className="flex gap-3 mt-6">
-                    <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                      Back
-                    </Button>
-                    <Button onClick={handlePlaceOrder} disabled={loading} size="lg" className="flex-1">
-                      {loading ? 'Processing...' : 'Place order'}
-                    </Button>
-                  </div>
+                  {formData.paymentMethod === 'credit_card' && (
+                    <div className="mt-6">
+                      {wooPaymentsLoading && (
+                        <p className="text-sm text-muted-foreground">Loading secure card form...</p>
+                      )}
+
+                      {!wooPaymentsLoading && wooPaymentsError && (
+                        <p className="text-sm text-destructive">{wooPaymentsError}</p>
+                      )}
+
+                      {!wooPaymentsLoading && !wooPaymentsError && (!wooPaymentsConfig?.ok || !wooPaymentsConfig?.isReady) && (
+                        <p className="text-sm text-destructive">Credit card payments are not available right now.</p>
+                      )}
+
+                      {!!stripePromise && wooPaymentsConfig?.ok && wooPaymentsConfig?.isReady && (
+                        <Elements
+                          stripe={stripePromise}
+                          options={{
+                            locale: String(wooPaymentsConfig?.config?.locale || 'en_US').split('_')[0]
+                          }}
+                        >
+                          <div className="p-4 border border-border rounded-lg">
+                            <Label className="cursor-default">Card details</Label>
+                            <div className="mt-3 rounded-lg border border-border bg-background p-3">
+                              <CardElement options={{ hidePostalCode: true }} />
+                            </div>
+                            {wooPaymentsConfig?.config?.testMode && (
+                              <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
+                            )}
+                          </div>
+
+                          <ElementsConsumer>
+                            {({ stripe, elements }) => (
+                              <div className="flex gap-3 mt-6">
+                                <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
+                                  Back
+                                </Button>
+                                <Button
+                                  onClick={() => handlePlaceOrder({ stripe, elements })}
+                                  disabled={loading || !stripe || !elements}
+                                  size="lg"
+                                  className="flex-1"
+                                >
+                                  {loading ? 'Processing...' : 'Place order'}
+                                </Button>
+                              </div>
+                            )}
+                          </ElementsConsumer>
+                        </Elements>
+                      )}
+
+                      {!(stripePromise && wooPaymentsConfig?.ok && wooPaymentsConfig?.isReady) && (
+                        <div className="flex gap-3 mt-6">
+                          <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
+                            Back
+                          </Button>
+                          <Button disabled size="lg" className="flex-1">
+                            Place order
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
