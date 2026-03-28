@@ -160,7 +160,7 @@ const TermsPage = () => {
               <p className="text-muted-foreground leading-relaxed">
                 <span className="font-medium text-foreground">contact@anfastyles.shop</span>
                 <br />
-                <span className="font-medium text-foreground">contact@MEDAITLLC.COM</span>
+                <span className="font-medium text-foreground">contact@anfastyles.shop</span>
               </p>
             </section>
           </div>

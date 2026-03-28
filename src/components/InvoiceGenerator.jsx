@@ -63,7 +63,7 @@ export const generateInvoice = async (order) => {
           <p style="margin: 0 0 4px; font-size: 14px; font-weight: bold;">Medait LLC</p>
           <p style="margin: 0 0 4px; font-size: 14px; color: #444;">1209 Mountain Road Place NE STE R</p>
           <p style="margin: 0 0 4px; font-size: 14px; color: #444;">Albuquerque, NM 87110</p>
-          <p style="margin: 0 0 4px; font-size: 14px; color: #444;">contact@medaitllc.com</p>
+          <p style="margin: 0 0 4px; font-size: 14px; color: #444;">contact@anfastyles.shop</p>
           <p style="margin: 0; font-size: 14px; color: #444;">+1 202-773-7432</p>
         </div>
         
@@ -140,7 +140,7 @@ export const generateInvoice = async (order) => {
         <p style="margin: 0; font-size: 12px; color: #666;">Payment Method: <span style="text-transform: capitalize;">${order.paymentMethod || 'Credit Card'}</span></p>
         <p style="margin: 10px 0 0; font-size: 11px; color: #888;">
           Returns accepted within 30 days of purchase. Items must be unworn and in original condition.<br>
-          For support, please contact contact@medaitllc.com
+          For support, please contact contact@anfastyles.shop
         </p>
       </div>
     </div>

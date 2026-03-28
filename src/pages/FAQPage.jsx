@@ -39,7 +39,7 @@ const FAQPage = () => {
     },
     {
       question: 'Do you offer wholesale or bulk orders?',
-      answer: 'Yes, we offer wholesale pricing for bulk orders. Please contact us at contact@medaitllc.com with your requirements for a custom quote.'
+      answer: 'Yes, we offer wholesale pricing for bulk orders. Please contact us at contact@anfastyles.shop with your requirements for a custom quote.'
     }
   ];
 

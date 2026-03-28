@@ -84,7 +84,7 @@ const Footer = () => {
               <p className="font-medium text-foreground">Medait LLC</p>
               <p>1209 Mountain Road Place Northeast STE R</p>
               <p>Albuquerque, NM 87110</p>
-              <p>contact@medaitllc.com</p>
+              <p>contact@anfastyles.shop</p>
               <p>+1 202-773-7432</p>
             </div>
 
