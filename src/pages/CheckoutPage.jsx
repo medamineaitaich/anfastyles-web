@@ -12,7 +12,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
-import { fetchWooPaymentsConfig } from '@/lib/wpBridgeClient';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -39,9 +38,7 @@ const CheckoutPage = () => {
   });
 
   const [errors, setErrors] = useState({});
-  const [wooPaymentsConfig, setWooPaymentsConfig] = useState(null);
-  const [wooPaymentsLoading, setWooPaymentsLoading] = useState(false);
-  const [wooPaymentsError, setWooPaymentsError] = useState('');
+  const stripePublishableKey = import.meta?.env?.VITE_STRIPE_PUBLISHABLE_KEY;
 
   useEffect(() => {
     const savedCart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0}');
@@ -51,35 +48,10 @@ const CheckoutPage = () => {
     setCart(savedCart);
   }, [navigate]);
 
-  useEffect(() => {
-    if (step !== 3 || formData.paymentMethod !== 'credit_card' || wooPaymentsConfig) return;
-
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        setWooPaymentsError('');
-        setWooPaymentsLoading(true);
-        const data = await fetchWooPaymentsConfig({ signal: controller.signal });
-        setWooPaymentsConfig(data);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        setWooPaymentsError(error?.message || 'Failed to load payment configuration');
-      } finally {
-        if (controller.signal.aborted) return;
-        setWooPaymentsLoading(false);
-      }
-    })();
-
-    return () => controller.abort();
-  }, [step, formData.paymentMethod, wooPaymentsConfig]);
-
   const stripePromise = useMemo(() => {
-    const publishableKey = wooPaymentsConfig?.config?.publishableKey;
-    const accountId = wooPaymentsConfig?.config?.accountId;
-    if (!publishableKey) return null;
-    return loadStripe(publishableKey, accountId ? { stripeAccount: accountId } : undefined);
-  }, [wooPaymentsConfig]);
+    if (!stripePublishableKey) return null;
+    return loadStripe(String(stripePublishableKey).trim());
+  }, [stripePublishableKey]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -118,13 +90,6 @@ const CheckoutPage = () => {
       let paymentMethodGateway = formData.paymentMethod;
 
       if (formData.paymentMethod === 'credit_card') {
-        const cardGatewayId = wooPaymentsConfig?.config?.paymentMethodsConfig?.card?.gatewayId;
-        paymentMethodGateway = cardGatewayId || 'woocommerce_payments';
-
-        if (!wooPaymentsConfig?.ok || !wooPaymentsConfig?.isReady) {
-          throw new Error('Payment is not ready. Please try again in a moment.');
-        }
-
         if (!stripe || !elements) {
           throw new Error('Payment form is not ready. Please refresh the page and try again.');
         }
@@ -134,74 +99,158 @@ const CheckoutPage = () => {
           throw new Error('Payment form is not ready. Please refresh the page and try again.');
         }
 
-        const billingDetails = {
-          name: `${formData.firstName} ${formData.lastName}`.trim(),
+        if (!stripePublishableKey) {
+          throw new Error('Stripe is not configured for checkout.');
+        }
+
+        // --- WooCommerce Store API cart-token flow (guest) ---
+        const storeFetch = async (path, { method = 'GET', body, store } = {}) => {
+          const headers = { 'Content-Type': 'application/json' };
+          if (store?.nonce) headers['x-store-nonce'] = store.nonce;
+          if (store?.cartToken) headers['x-store-cart-token'] = store.cartToken;
+
+          const res = await apiServerClient.fetch(`/store${path}`, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+          });
+
+          const json = await res.json().catch(() => null);
+          if (!res.ok) {
+            const message = json?.error || json?.message || 'Store checkout failed';
+            const err = new Error(message);
+            err.details = json;
+            throw err;
+          }
+
+          return json;
+        };
+
+        const normalize = (v) => String(v || '').trim().toLowerCase();
+
+        const resolveVariationId = async (cartItem) => {
+          if (!cartItem?.productId) throw new Error('Missing productId in cart item');
+          if (Number.isFinite(Number(cartItem.variationId))) return Number(cartItem.variationId);
+
+          const productRes = await storeFetch(`/products/${cartItem.productId}`);
+          const variations = productRes?.data?.variations || [];
+
+          const color = normalize(cartItem.color);
+          const size = normalize(cartItem.size);
+
+          const match = variations.find((v) => {
+            const attrs = Array.isArray(v?.attributes) ? v.attributes : [];
+            const getAttr = (name) => attrs.find((a) => normalize(a?.name) === normalize(name))?.value;
+            const vColor = normalize(getAttr('Colors'));
+            const vSize = normalize(getAttr('Sizes'));
+
+            const colorOk = color ? vColor === color : true;
+            const sizeOk = size ? vSize === size : true;
+            return colorOk && sizeOk;
+          });
+
+          if (!match?.id) {
+            throw new Error('Selected variant is unavailable. Please re-add the item to your cart.');
+          }
+
+          return Number(match.id);
+        };
+
+        // 1) Start Store API session (nonce + cart-token)
+        let storeSession = (await storeFetch('/cart'))?.store;
+
+        // 2) Add local cart items into Store API cart
+        for (const cartItem of cart.items) {
+          const variationId = await resolveVariationId(cartItem);
+          const added = await storeFetch('/cart/add-item', {
+            method: 'POST',
+            store: storeSession,
+            body: { id: variationId, quantity: cartItem.quantity },
+          });
+          storeSession = added?.store || storeSession;
+        }
+
+        // 3) Persist customer addresses (so shipping/tax can be calculated)
+        const billing_address = {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          company: '',
+          address_1: formData.address,
+          address_2: '',
+          city: formData.city,
+          state: formData.state,
+          postcode: formData.zip,
+          country: formData.country,
           email: formData.email,
-          phone: formData.phone || undefined,
-          address: {
-            line1: formData.address,
-            city: formData.city,
-            state: formData.state,
-            postal_code: formData.zip,
-            country: formData.country
-          }
+          phone: formData.phone || '',
         };
 
-        const cartItems = cart.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: parseFloat(item.price)
-        }));
+        const shipping_address = {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          company: '',
+          address_1: formData.address,
+          address_2: '',
+          city: formData.city,
+          state: formData.state,
+          postcode: formData.zip,
+          country: formData.country,
+          phone: formData.phone || '',
+        };
 
-        const intentRes = await apiServerClient.fetch('/payments/woopayments/intent', {
+        const updated = await storeFetch('/cart/update-customer', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cartItems,
-            shippingCost,
-            tax,
-            total,
-            currency: wooPaymentsConfig?.config?.currency || 'usd',
-            customerEmail: formData.email
-          })
+          store: storeSession,
+          body: { billing_address, shipping_address },
         });
+        storeSession = updated?.store || storeSession;
 
-        if (!intentRes.ok) {
-          const errorData = await intentRes.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to start payment');
+        // 4) Create Stripe Source and submit Store API checkout using the Stripe gateway.
+        const { error: sourceError, source } = await stripe.createSource(cardElement);
+        if (sourceError) {
+          throw new Error(sourceError.message || 'Card details are invalid');
+        }
+        if (!source?.id) {
+          throw new Error('Payment configuration error. Missing Stripe source.');
         }
 
-        const intentData = await intentRes.json();
-        const clientSecret = intentData?.clientSecret;
-
-        if (!clientSecret) {
-          throw new Error('Payment configuration error. Missing client secret.');
-        }
-
-        const confirmResult = await stripe.confirmCardPayment(clientSecret, {
-          payment_method: {
-            card: cardElement,
-            billing_details: billingDetails
-          }
-        });
-
-        if (confirmResult?.error) {
-          throw new Error(confirmResult.error.message || 'Payment failed');
-        }
-
-        const paymentIntent = confirmResult?.paymentIntent;
-        const status = paymentIntent?.status;
-        if (status !== 'succeeded' && status !== 'processing') {
-          throw new Error(`Payment not completed (status: ${status || 'unknown'})`);
-        }
-
+        paymentMethodGateway = 'stripe';
         paymentData = {
-          provider: 'woopayments',
-          gatewayId: paymentMethodGateway,
-          stripePaymentIntentId: paymentIntent?.id || intentData?.paymentIntentId || null,
-          testMode: !!wooPaymentsConfig?.config?.testMode,
-          status: status || null
+          provider: 'stripe',
+          stripeSourceId: source.id,
         };
+
+        const checkoutRes = await storeFetch('/checkout', {
+          method: 'POST',
+          store: storeSession,
+          body: {
+            billing_address,
+            shipping_address,
+            payment_method: 'stripe',
+            payment_data: [
+              { key: 'stripe_source', value: source.id },
+              { key: 'billing_email', value: formData.email },
+              { key: 'billing_first_name', value: formData.firstName },
+              { key: 'billing_last_name', value: formData.lastName },
+              { key: 'paymentMethod', value: 'stripe' },
+              { key: 'paymentRequestType', value: 'cc' },
+              { key: 'wc-stripe-new-payment-method', value: true },
+            ],
+          },
+        });
+
+        const checkoutData = checkoutRes?.data;
+        const paymentStatus = checkoutData?.payment_result?.payment_status;
+        if (paymentStatus !== 'success') {
+          const msg = checkoutData?.payment_result?.payment_details?.find((d) => d?.key === 'message')?.value;
+          throw new Error(msg || 'Payment failed');
+        }
+
+        localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
+        window.dispatchEvent(new Event('cartUpdated'));
+
+        navigate(`/order-confirmation?orderId=${checkoutData.order_id}&orderNumber=${checkoutData.order_number || checkoutData.order_id}`);
+        return;
       }
 
       const orderData = {
@@ -480,33 +529,20 @@ const CheckoutPage = () => {
 
                   {formData.paymentMethod === 'credit_card' && (
                     <div className="mt-6">
-                      {wooPaymentsLoading && (
-                        <p className="text-sm text-muted-foreground">Loading secure card form...</p>
+                      {!stripePublishableKey && (
+                        <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
                       )}
 
-                      {!wooPaymentsLoading && wooPaymentsError && (
-                        <p className="text-sm text-destructive">{wooPaymentsError}</p>
-                      )}
-
-                      {!wooPaymentsLoading && !wooPaymentsError && (!wooPaymentsConfig?.ok || !wooPaymentsConfig?.isReady) && (
-                        <p className="text-sm text-destructive">Credit card payments are not available right now.</p>
-                      )}
-
-                      {!!stripePromise && wooPaymentsConfig?.ok && wooPaymentsConfig?.isReady && (
+                      {!!stripePromise && (
                         <Elements
                           stripe={stripePromise}
-                          options={{
-                            locale: String(wooPaymentsConfig?.config?.locale || 'en_US').split('_')[0]
-                          }}
                         >
                           <div className="p-4 border border-border rounded-lg">
                             <Label className="cursor-default">Card details</Label>
                             <div className="mt-3 rounded-lg border border-border bg-background p-3">
                               <CardElement options={{ hidePostalCode: true }} />
                             </div>
-                            {wooPaymentsConfig?.config?.testMode && (
-                              <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
-                            )}
+                            <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
                           </div>
 
                           <ElementsConsumer>
@@ -529,7 +565,7 @@ const CheckoutPage = () => {
                         </Elements>
                       )}
 
-                      {!(stripePromise && wooPaymentsConfig?.ok && wooPaymentsConfig?.isReady) && (
+                      {!stripePromise && (
                         <div className="flex gap-3 mt-6">
                           <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
                             Back
