@@ -23,8 +23,8 @@ const wpBridgeClient = {
   }
 };
 
-export const fetchWooPaymentsConfig = async () => {
-  const res = await wpBridgeClient.fetch('/wp-json/anfastyles/v1/woopayments-config');
+export const fetchWooPaymentsConfig = async ({ signal } = {}) => {
+  const res = await wpBridgeClient.fetch('/wp-json/anfastyles/v1/woopayments-config', { signal });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || 'Failed to load WooPayments config');
@@ -33,4 +33,3 @@ export const fetchWooPaymentsConfig = async () => {
 };
 
 export default wpBridgeClient;
-

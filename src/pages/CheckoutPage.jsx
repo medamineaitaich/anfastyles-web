@@ -52,29 +52,27 @@ const CheckoutPage = () => {
   }, [navigate]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (step !== 3 || formData.paymentMethod !== 'credit_card' || wooPaymentsConfig) return;
 
-    const loadWooPayments = async () => {
+    const controller = new AbortController();
+
+    (async () => {
       try {
         setWooPaymentsError('');
         setWooPaymentsLoading(true);
-        const data = await fetchWooPaymentsConfig();
-        if (!cancelled) setWooPaymentsConfig(data);
+        const data = await fetchWooPaymentsConfig({ signal: controller.signal });
+        setWooPaymentsConfig(data);
       } catch (error) {
-        if (!cancelled) setWooPaymentsError(error?.message || 'Failed to load payment configuration');
+        if (controller.signal.aborted) return;
+        setWooPaymentsError(error?.message || 'Failed to load payment configuration');
       } finally {
-        if (!cancelled) setWooPaymentsLoading(false);
+        if (controller.signal.aborted) return;
+        setWooPaymentsLoading(false);
       }
-    };
+    })();
 
-    if (step === 3 && formData.paymentMethod === 'credit_card' && !wooPaymentsConfig && !wooPaymentsLoading && !wooPaymentsError) {
-      loadWooPayments();
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [step, formData.paymentMethod, wooPaymentsConfig, wooPaymentsLoading, wooPaymentsError]);
+    return () => controller.abort();
+  }, [step, formData.paymentMethod, wooPaymentsConfig]);
 
   const stripePromise = useMemo(() => {
     const publishableKey = wooPaymentsConfig?.config?.publishableKey;
