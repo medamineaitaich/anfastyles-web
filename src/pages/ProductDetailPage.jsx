@@ -23,6 +23,30 @@ const ProductDetailPage = () => {
   const [selectedColor, setSelectedColor] = useState('');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
+  const toNumber = (value, fallback) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const formatPrice = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toFixed(2) : '0.00';
+  };
+
+  const getImageUrl = (value) => {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') return value.src || value.url || null;
+    return null;
+  };
+
+  const normalizeImages = (imagesValue, fallbackImage) => {
+    if (Array.isArray(imagesValue)) {
+      return imagesValue.map(getImageUrl).filter(Boolean);
+    }
+    const one = getImageUrl(fallbackImage);
+    return one ? [one] : [];
+  };
+
   useEffect(() => {
     fetchProduct();
     fetchRelatedProducts();
@@ -36,6 +60,7 @@ const ProductDetailPage = () => {
 
       const data = await response.json();
       setProduct(data);
+      setSelectedImage(0);
     } catch (error) {
       console.error('Error fetching product:', error);
       toast.error('Failed to load product');
@@ -134,8 +159,8 @@ const ProductDetailPage = () => {
     );
   }
 
-  const images = product.images || [product.image];
-  const averageRating = product.rating || 4.5;
+  const images = normalizeImages(product.images, product.image);
+  const averageRating = toNumber(product.rating, 4.5);
 
   return (
     <>
@@ -208,7 +233,7 @@ const ProductDetailPage = () => {
                 </span>
               </div>
 
-              <p className="mb-6 text-3xl font-bold font-variant-tabular">${parseFloat(product.price).toFixed(2)}</p>
+              <p className="mb-6 text-3xl font-bold font-variant-tabular">${formatPrice(product.price)}</p>
 
               <p className="mb-6 max-w-prose leading-relaxed text-muted-foreground">
                 {product.description || 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.'}

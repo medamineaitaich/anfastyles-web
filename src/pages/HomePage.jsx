@@ -19,6 +19,17 @@ const HomePage = () => {
   const [email, setEmail] = useState('');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
+  const formatPrice = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n.toFixed(2) : '0.00';
+  };
+
+  const getImageUrl = (value) => {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object') return value.src || value.url || null;
+    return null;
+  };
+
   useEffect(() => {
     fetchFeaturedProducts();
   }, []);
@@ -183,12 +194,12 @@ const HomePage = () => {
                   >
                     <Link to={`/product/${product.id}`} className="card-product block h-full">
                       <div className="aspect-square bg-muted overflow-hidden">
-                        <img
-                          src={product.image || 'https://images.unsplash.com/photo-1618815909724-861120595390'}
-                          alt={product.name}
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                        />
-                      </div>
+                          <img
+                            src={getImageUrl(product.image) || 'https://images.unsplash.com/photo-1618815909724-861120595390'}
+                            alt={product.name}
+                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          />
+                        </div>
                       <div className="p-4">
                         <h3 className="font-semibold mb-1 truncate">{product.name}</h3>
                         <div className="flex items-center gap-2 mb-2">
@@ -202,7 +213,7 @@ const HomePage = () => {
                           </div>
                           <span className="text-xs text-muted-foreground">({product.reviewCount || 0})</span>
                         </div>
-                        <p className="font-semibold text-lg font-variant-tabular">${product.price.toFixed(2)}</p>
+                        <p className="font-semibold text-lg font-variant-tabular">${formatPrice(product.price)}</p>
                       </div>
                     </Link>
                   </motion.div>
