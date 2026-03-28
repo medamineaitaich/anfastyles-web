@@ -22,6 +22,7 @@ import FAQPage from './pages/FAQPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import RefundPolicyPage from './pages/RefundPolicyPage.jsx';
+import ShippingPolicyPage from './pages/ShippingPolicyPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         <Toaster />
