@@ -374,6 +374,30 @@ const CheckoutPage = () => {
             <div className="lg:col-span-1">
               <div className="bg-card border border-border rounded-xl p-6 sticky top-24">
                 <h2 className="text-xl font-bold mb-4">Order summary</h2>
+
+                {cart.items.length > 0 && (
+                  <div className="space-y-4 mb-6">
+                    {cart.items.map((item) => {
+                      const unitPrice = parseFloat(item.price) || 0;
+                      const lineTotal = unitPrice * item.quantity;
+
+                      return (
+                        <div key={`${item.productId}-${item.size || ''}-${item.color || ''}`} className="flex gap-3">
+                          <img
+                            src={item.image || 'https://images.unsplash.com/photo-1618815909724-861120595390'}
+                            alt={item.name || 'Cart item'}
+                            className="w-12 h-12 object-cover rounded-lg bg-muted"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{item.name || 'Item'}</p>
+                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                          </div>
+                          <p className="text-sm font-semibold font-variant-tabular">${lineTotal.toFixed(2)}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between text-sm">

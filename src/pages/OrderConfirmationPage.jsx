@@ -5,6 +5,7 @@ import { CheckCircle, Package, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { generateInvoice } from '@/components/InvoiceGenerator.jsx';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
@@ -16,14 +17,15 @@ const OrderConfirmationPage = () => {
   const orderNumber = searchParams.get('orderNumber');
 
   const [orderData, setOrderData] = useState(null);
+  const { authenticated } = useAuth();
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
-    if (orderId) {
+    if (orderId && authenticated) {
       fetchOrderDetails();
     }
-  }, [orderId]);
+  }, [orderId, authenticated]);
 
   const fetchOrderDetails = async () => {
     try {
