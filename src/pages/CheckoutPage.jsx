@@ -134,32 +134,73 @@ const CheckoutPage = () => {
           throw new Error('Payment form is not ready. Please refresh the page and try again.');
         }
 
-        const { error, paymentMethod } = await stripe.createPaymentMethod({
-          type: 'card',
-          card: cardElement,
-          billing_details: {
-            name: `${formData.firstName} ${formData.lastName}`.trim(),
-            email: formData.email,
-            phone: formData.phone || undefined,
-            address: {
-              line1: formData.address,
-              city: formData.city,
-              state: formData.state,
-              postal_code: formData.zip,
-              country: formData.country
-            }
+        const billingDetails = {
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+          email: formData.email,
+          phone: formData.phone || undefined,
+          address: {
+            line1: formData.address,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.zip,
+            country: formData.country
+          }
+        };
+
+        const cartItems = cart.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: parseFloat(item.price)
+        }));
+
+        const intentRes = await apiServerClient.fetch('/payments/woopayments/intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cartItems,
+            shippingCost,
+            tax,
+            total,
+            currency: wooPaymentsConfig?.config?.currency || 'usd',
+            customerEmail: formData.email
+          })
+        });
+
+        if (!intentRes.ok) {
+          const errorData = await intentRes.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to start payment');
+        }
+
+        const intentData = await intentRes.json();
+        const clientSecret = intentData?.clientSecret;
+
+        if (!clientSecret) {
+          throw new Error('Payment configuration error. Missing client secret.');
+        }
+
+        const confirmResult = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: billingDetails
           }
         });
 
-        if (error) {
-          throw new Error(error.message || 'Payment details are invalid');
+        if (confirmResult?.error) {
+          throw new Error(confirmResult.error.message || 'Payment failed');
+        }
+
+        const paymentIntent = confirmResult?.paymentIntent;
+        const status = paymentIntent?.status;
+        if (status !== 'succeeded' && status !== 'processing') {
+          throw new Error(`Payment not completed (status: ${status || 'unknown'})`);
         }
 
         paymentData = {
           provider: 'woopayments',
           gatewayId: paymentMethodGateway,
-          stripePaymentMethodId: paymentMethod?.id || null,
-          testMode: !!wooPaymentsConfig?.config?.testMode
+          stripePaymentIntentId: paymentIntent?.id || intentData?.paymentIntentId || null,
+          testMode: !!wooPaymentsConfig?.config?.testMode,
+          status: status || null
         };
       }
 
