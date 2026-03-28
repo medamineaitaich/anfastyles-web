@@ -15,6 +15,18 @@ const OrderHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
+  const normalizeOrders = (data) => {
+    const raw = Array.isArray(data) ? data : (Array.isArray(data?.orders) ? data.orders : []);
+
+    return raw.map((order) => ({
+      id: order?.id,
+      orderNumber: order?.orderNumber ?? order?.number ?? order?.id,
+      status: order?.status || 'processing',
+      total: Number(order?.total) || 0,
+      date: order?.date || order?.date_created || order?.createdAt || new Date().toISOString(),
+    }));
+  };
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -25,7 +37,7 @@ const OrderHistoryPage = () => {
       if (!response.ok) throw new Error('Failed to fetch orders');
 
       const data = await response.json();
-      setOrders(data);
+      setOrders(normalizeOrders(data));
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
