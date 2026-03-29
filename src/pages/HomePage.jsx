@@ -14,7 +14,7 @@ import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
 const HomePage = () => {
-  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [homeProducts, setHomeProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -31,18 +31,88 @@ const HomePage = () => {
   };
 
   useEffect(() => {
-    fetchFeaturedProducts();
+    fetchHomeProducts();
   }, []);
 
-  const fetchFeaturedProducts = async () => {
+  const getPrimaryCategoryKey = (product) => {
+    const categories = product?.categories;
+    if (!Array.isArray(categories) || categories.length === 0) return null;
+
+    const first = categories[0];
+    if (typeof first === 'string') return first;
+    if (first && typeof first === 'object') return first.id ?? first.slug ?? first.name ?? null;
+    return null;
+  };
+
+  const pickMixedProducts = (products, count) => {
+    const input = Array.isArray(products) ? products : [];
+    const desiredCount = Math.max(0, Number(count) || 0);
+    if (desiredCount === 0) return [];
+
+    const buckets = new Map();
+    const categoryOrder = [];
+
+    for (const product of input) {
+      if (!product || product.id == null) continue;
+
+      const key = getPrimaryCategoryKey(product) ?? '__uncategorized__';
+      if (!buckets.has(key)) {
+        buckets.set(key, []);
+        categoryOrder.push(key);
+      }
+      buckets.get(key).push(product);
+    }
+
+    const selected = [];
+    const selectedIds = new Set();
+
+    while (selected.length < desiredCount) {
+      let addedInRound = false;
+
+      for (const key of categoryOrder) {
+        if (selected.length >= desiredCount) break;
+
+        const bucket = buckets.get(key);
+        if (!bucket || bucket.length === 0) continue;
+
+        const candidate = bucket.shift();
+        if (!candidate || candidate.id == null || selectedIds.has(candidate.id)) continue;
+
+        selected.push(candidate);
+        selectedIds.add(candidate.id);
+        addedInRound = true;
+      }
+
+      if (!addedInRound) break;
+    }
+
+    if (selected.length < desiredCount) {
+      for (const product of input) {
+        if (selected.length >= desiredCount) break;
+        if (!product || product.id == null || selectedIds.has(product.id)) continue;
+        selected.push(product);
+        selectedIds.add(product.id);
+      }
+    }
+
+    return selected.slice(0, desiredCount);
+  };
+
+  const fetchHomeProducts = async () => {
     try {
-      const response = await apiServerClient.fetch('/products/featured');
+      const params = new URLSearchParams({
+        page: '1',
+        perPage: '48',
+        sort: 'newest',
+      });
+
+      const response = await apiServerClient.fetch(`/products?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
       const products = Array.isArray(data) ? data : (data?.products || []);
-      setFeaturedProducts(products.slice(0, 6));
+      setHomeProducts(pickMixedProducts(products, 12));
     } catch (error) {
-      console.error('Error fetching featured products:', error);
+      console.error('Error fetching home products:', error);
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
@@ -174,8 +244,8 @@ const HomePage = () => {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {[...Array(12)].map((_, i) => (
                   <div key={i} className="space-y-3">
                     <Skeleton className="w-full aspect-square rounded-xl" />
                     <Skeleton className="h-4 w-3/4" />
@@ -184,8 +254,8 @@ const HomePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredProducts.map((product, index) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {homeProducts.map((product, index) => (
                   <motion.div
                     key={product.id}
                     initial={{ opacity: 0, y: 20 }}
