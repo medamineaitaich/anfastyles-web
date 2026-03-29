@@ -16,12 +16,52 @@ import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
+const PAYMENT_METHOD_META = {
+  stripe: {
+    label: 'Credit card',
+    description: 'Visa, Mastercard, Amex',
+  },
+  woocommerce_payments: {
+    label: 'WooPayments',
+    description: 'Available from WooCommerce',
+  },
+  cod: {
+    label: 'Cash on delivery',
+    description: 'Pay when your order arrives',
+  },
+};
+
+const getPaymentMethodLabel = (method) => PAYMENT_METHOD_META[method]?.label || String(method || '')
+  .replace(/[_-]+/g, ' ')
+  .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const getPaymentMethodDescription = (method) => PAYMENT_METHOD_META[method]?.description || 'Available payment method';
+
+const normalizePaymentMethods = (methods) => {
+  if (!Array.isArray(methods)) return [];
+
+  const supportedFirst = ['stripe', 'woocommerce_payments', 'cod'];
+  const filtered = methods
+    .map((method) => String(method || '').trim())
+    .filter(Boolean);
+
+  const unique = [...new Set(filtered)];
+  const ordered = [
+    ...supportedFirst.filter((method) => unique.includes(method)),
+    ...unique.filter((method) => !supportedFirst.includes(method)),
+  ];
+
+  return ordered;
+};
+
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState({ items: [], subtotal: 0 });
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [availablePaymentMethods, setAvailablePaymentMethods] = useState(['stripe']);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -34,7 +74,7 @@ const CheckoutPage = () => {
     zip: '',
     country: 'US',
     shippingMethod: 'standard',
-    paymentMethod: 'credit_card'
+    paymentMethod: 'stripe'
   });
 
   const [errors, setErrors] = useState({});
@@ -70,6 +110,41 @@ const CheckoutPage = () => {
     }
     setCart(savedCart);
   }, [navigate]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPaymentMethods = async () => {
+      try {
+        setPaymentMethodsLoading(true);
+        const res = await apiServerClient.fetch('/store/cart');
+        const json = await res.json().catch(() => null);
+        const methods = normalizePaymentMethods(json?.data?.payment_methods);
+        const nextMethods = methods.length > 0 ? methods : ['stripe'];
+
+        if (cancelled) return;
+
+        setAvailablePaymentMethods(nextMethods);
+        setFormData((prev) => ({
+          ...prev,
+          paymentMethod: nextMethods.includes(prev.paymentMethod) ? prev.paymentMethod : nextMethods[0],
+        }));
+      } catch {
+        if (!cancelled) {
+          setAvailablePaymentMethods(['stripe']);
+        }
+      } finally {
+        if (!cancelled) {
+          setPaymentMethodsLoading(false);
+        }
+      }
+    };
+
+    loadPaymentMethods();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const stripePromise = useMemo(() => {
     if (!stripePublishableKey) return null;
@@ -111,8 +186,122 @@ const CheckoutPage = () => {
     try {
       let paymentData = null;
       let paymentMethodGateway = formData.paymentMethod;
+      const storeFetch = async (path, { method = 'GET', body, store } = {}) => {
+        const headers = { 'Content-Type': 'application/json' };
+        if (store?.nonce) headers['x-store-nonce'] = store.nonce;
+        if (store?.cartToken) headers['x-store-cart-token'] = store.cartToken;
 
-      if (formData.paymentMethod === 'credit_card') {
+        const res = await apiServerClient.fetch(`/store${path}`, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+        });
+
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          const message =
+            json?.details?.message ||
+            json?.details?.error ||
+            json?.error ||
+            json?.message ||
+            'Store checkout failed';
+          const err = new Error(message);
+          err.details = json;
+          throw err;
+        }
+
+        return json;
+      };
+      const normalize = (v) => String(v || '').trim().toLowerCase();
+      const resolveVariationId = async (cartItem) => {
+        if (!cartItem?.productId) throw new Error('Missing productId in cart item');
+        if (Number.isFinite(Number(cartItem.variationId))) return Number(cartItem.variationId);
+
+        const productRes = await storeFetch(`/products/${cartItem.productId}`);
+        const variations = productRes?.data?.variations || [];
+
+        const color = normalize(cartItem.color);
+        const size = normalize(cartItem.size);
+
+        const match = variations.find((v) => {
+          const attrs = Array.isArray(v?.attributes) ? v.attributes : [];
+          const getAttr = (name) => attrs.find((a) => normalize(a?.name) === normalize(name))?.value;
+          const vColor = normalize(getAttr('Colors'));
+          const vSize = normalize(getAttr('Sizes'));
+
+          const colorOk = color ? vColor === color : true;
+          const sizeOk = size ? vSize === size : true;
+          return colorOk && sizeOk;
+        });
+
+        if (!match?.id) {
+          throw new Error('Selected variant is unavailable. Please re-add the item to your cart.');
+        }
+
+        return Number(match.id);
+      };
+      const billing_address = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        company: '',
+        address_1: formData.address,
+        address_2: '',
+        city: formData.city,
+        state: formData.state,
+        postcode: formData.zip,
+        country: formData.country,
+        email: formData.email,
+        phone: formData.phone || '',
+      };
+      const shipping_address = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        company: '',
+        address_1: formData.address,
+        address_2: '',
+        city: formData.city,
+        state: formData.state,
+        postcode: formData.zip,
+        country: formData.country,
+        phone: formData.phone || '',
+      };
+
+      const buildStoreCheckoutSession = async () => {
+        let storeSession = (await storeFetch('/cart'))?.store;
+
+        for (const cartItem of cart.items) {
+          const variationId = await resolveVariationId(cartItem);
+          const added = await storeFetch('/cart/add-item', {
+            method: 'POST',
+            store: storeSession,
+            body: { id: variationId, quantity: cartItem.quantity },
+          });
+          storeSession = added?.store || storeSession;
+        }
+
+        const updated = await storeFetch('/cart/update-customer', {
+          method: 'POST',
+          store: storeSession,
+          body: { billing_address, shipping_address },
+        });
+
+        return updated?.store || storeSession;
+      };
+      const finalizeStoreCheckout = async (checkoutRes) => {
+        const checkoutData = checkoutRes?.data;
+        const paymentStatus = checkoutData?.payment_result?.payment_status;
+        if (paymentStatus !== 'success') {
+          const msg = checkoutData?.payment_result?.payment_details?.find((d) => d?.key === 'message')?.value;
+          throw new Error(msg || 'Payment failed');
+        }
+
+        localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
+        window.dispatchEvent(new Event('cartUpdated'));
+
+        navigate(`/order-confirmation?orderId=${checkoutData.order_id}&orderNumber=${checkoutData.order_number || checkoutData.order_id}`);
+      };
+
+      if (formData.paymentMethod === 'stripe') {
         if (!stripe || !elements) {
           throw new Error('Payment form is not ready. Please refresh the page and try again.');
         }
@@ -126,112 +315,7 @@ const CheckoutPage = () => {
           throw new Error('Stripe is not configured for checkout.');
         }
 
-        // --- WooCommerce Store API cart-token flow (guest) ---
-        const storeFetch = async (path, { method = 'GET', body, store } = {}) => {
-          const headers = { 'Content-Type': 'application/json' };
-          if (store?.nonce) headers['x-store-nonce'] = store.nonce;
-          if (store?.cartToken) headers['x-store-cart-token'] = store.cartToken;
-
-          const res = await apiServerClient.fetch(`/store${path}`, {
-            method,
-            headers,
-            body: body ? JSON.stringify(body) : undefined,
-          });
-
-           const json = await res.json().catch(() => null);
-           if (!res.ok) {
-            const message =
-              json?.details?.message ||
-              json?.details?.error ||
-              json?.error ||
-              json?.message ||
-              'Store checkout failed';
-            const err = new Error(message);
-            err.details = json;
-            throw err;
-           }
-
-          return json;
-        };
-
-        const normalize = (v) => String(v || '').trim().toLowerCase();
-
-        const resolveVariationId = async (cartItem) => {
-          if (!cartItem?.productId) throw new Error('Missing productId in cart item');
-          if (Number.isFinite(Number(cartItem.variationId))) return Number(cartItem.variationId);
-
-          const productRes = await storeFetch(`/products/${cartItem.productId}`);
-          const variations = productRes?.data?.variations || [];
-
-          const color = normalize(cartItem.color);
-          const size = normalize(cartItem.size);
-
-          const match = variations.find((v) => {
-            const attrs = Array.isArray(v?.attributes) ? v.attributes : [];
-            const getAttr = (name) => attrs.find((a) => normalize(a?.name) === normalize(name))?.value;
-            const vColor = normalize(getAttr('Colors'));
-            const vSize = normalize(getAttr('Sizes'));
-
-            const colorOk = color ? vColor === color : true;
-            const sizeOk = size ? vSize === size : true;
-            return colorOk && sizeOk;
-          });
-
-          if (!match?.id) {
-            throw new Error('Selected variant is unavailable. Please re-add the item to your cart.');
-          }
-
-          return Number(match.id);
-        };
-
-        // 1) Start Store API session (nonce + cart-token)
-        let storeSession = (await storeFetch('/cart'))?.store;
-
-        // 2) Add local cart items into Store API cart
-        for (const cartItem of cart.items) {
-          const variationId = await resolveVariationId(cartItem);
-          const added = await storeFetch('/cart/add-item', {
-            method: 'POST',
-            store: storeSession,
-            body: { id: variationId, quantity: cartItem.quantity },
-          });
-          storeSession = added?.store || storeSession;
-        }
-
-        // 3) Persist customer addresses (so shipping/tax can be calculated)
-        const billing_address = {
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          company: '',
-          address_1: formData.address,
-          address_2: '',
-          city: formData.city,
-          state: formData.state,
-          postcode: formData.zip,
-          country: formData.country,
-          email: formData.email,
-          phone: formData.phone || '',
-        };
-
-        const shipping_address = {
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          company: '',
-          address_1: formData.address,
-          address_2: '',
-          city: formData.city,
-          state: formData.state,
-          postcode: formData.zip,
-          country: formData.country,
-          phone: formData.phone || '',
-        };
-
-        const updated = await storeFetch('/cart/update-customer', {
-          method: 'POST',
-          store: storeSession,
-          body: { billing_address, shipping_address },
-        });
-        storeSession = updated?.store || storeSession;
+        const storeSession = await buildStoreCheckoutSession();
 
         // 4) Create a Stripe PaymentMethod (Stripe.js v3+; createSource is not supported in newer Stripe.js builds).
         const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
@@ -280,19 +364,31 @@ const CheckoutPage = () => {
             ],
           },
         });
-
-        const checkoutData = checkoutRes?.data;
-        const paymentStatus = checkoutData?.payment_result?.payment_status;
-        if (paymentStatus !== 'success') {
-          const msg = checkoutData?.payment_result?.payment_details?.find((d) => d?.key === 'message')?.value;
-          throw new Error(msg || 'Payment failed');
-        }
-
-        localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
-        window.dispatchEvent(new Event('cartUpdated'));
-
-        navigate(`/order-confirmation?orderId=${checkoutData.order_id}&orderNumber=${checkoutData.order_number || checkoutData.order_id}`);
+        await finalizeStoreCheckout(checkoutRes);
         return;
+      }
+
+      if (formData.paymentMethod === 'cod') {
+        const storeSession = await buildStoreCheckoutSession();
+        const checkoutRes = await storeFetch('/checkout', {
+          method: 'POST',
+          store: storeSession,
+          body: {
+            billing_address,
+            shipping_address,
+            payment_method: 'cod',
+            payment_data: [
+              { key: 'payment_method', value: 'cod' },
+            ],
+          },
+        });
+
+        await finalizeStoreCheckout(checkoutRes);
+        return;
+      }
+
+      if (formData.paymentMethod === 'woocommerce_payments') {
+        throw new Error('WooPayments is visible from WooCommerce, but its headless payment details are not wired yet. Please use Stripe or cash on delivery.');
       }
 
       const orderData = {
@@ -557,22 +653,28 @@ const CheckoutPage = () => {
                     <h2 className="text-xl font-bold">Payment method</h2>
                   </div>
 
-                  <RadioGroup value={formData.paymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-4 border border-border rounded-lg">
-                        <RadioGroupItem value="credit_card" id="credit_card" />
-                        <Label htmlFor="credit_card" className="cursor-pointer">
-                          <p className="font-semibold">Credit card</p>
-                          <p className="text-sm text-muted-foreground">Visa, Mastercard, Amex</p>
-                        </Label>
-                      </div>
-                    </div>
-                  </RadioGroup>
+                   {paymentMethodsLoading ? (
+                     <p className="text-sm text-muted-foreground">Loading payment methods...</p>
+                   ) : (
+                     <RadioGroup value={formData.paymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}>
+                       <div className="space-y-3">
+                         {availablePaymentMethods.map((method) => (
+                           <div key={method} className="flex items-center gap-3 p-4 border border-border rounded-lg">
+                             <RadioGroupItem value={method} id={method} />
+                             <Label htmlFor={method} className="cursor-pointer">
+                               <p className="font-semibold">{getPaymentMethodLabel(method)}</p>
+                               <p className="text-sm text-muted-foreground">{getPaymentMethodDescription(method)}</p>
+                             </Label>
+                           </div>
+                         ))}
+                       </div>
+                     </RadioGroup>
+                   )}
 
-                  {formData.paymentMethod === 'credit_card' && (
-                    <div className="mt-6">
-                      {!stripePublishableKey && (
-                        <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
+                   {formData.paymentMethod === 'stripe' && (
+                     <div className="mt-6">
+                       {!stripePublishableKey && (
+                         <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
                       )}
 
                       {!!stripePromise && (
@@ -616,11 +718,57 @@ const CheckoutPage = () => {
                             Place order
                           </Button>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                       )}
+                     </div>
+                   )}
+
+                   {formData.paymentMethod === 'cod' && (
+                     <div className="mt-6">
+                       <div className="p-4 border border-border rounded-lg">
+                         <p className="font-semibold">Cash on delivery</p>
+                         <p className="text-sm text-muted-foreground mt-1">Your order will be submitted with WooCommerce Cash on Delivery.</p>
+                       </div>
+
+                       <div className="flex gap-3 mt-6">
+                         <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
+                           Back
+                         </Button>
+                         <Button
+                           onClick={() => handlePlaceOrder()}
+                           disabled={loading}
+                           size="lg"
+                           className="flex-1"
+                         >
+                           {loading ? 'Processing...' : 'Place order'}
+                         </Button>
+                       </div>
+                     </div>
+                   )}
+
+                   {formData.paymentMethod === 'woocommerce_payments' && (
+                     <div className="mt-6">
+                       <div className="p-4 border border-border rounded-lg">
+                         <p className="font-semibold">WooPayments</p>
+                         <p className="text-sm text-muted-foreground mt-1">This method is exposed by WooCommerce, but the headless payment details are not wired yet.</p>
+                       </div>
+
+                       <div className="flex gap-3 mt-6">
+                         <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
+                           Back
+                         </Button>
+                         <Button
+                           onClick={() => handlePlaceOrder()}
+                           disabled={loading}
+                           size="lg"
+                           className="flex-1"
+                         >
+                           {loading ? 'Processing...' : 'Place order'}
+                         </Button>
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               )}
             </div>
 
             <div className="lg:col-span-1">
