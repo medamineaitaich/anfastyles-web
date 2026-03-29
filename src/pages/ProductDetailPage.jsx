@@ -661,7 +661,7 @@ const ProductDetailPage = () => {
       <>
         <Header onCartClick={() => setCartDrawerOpen(true)} />
         <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
-        <main className="py-12 pb-20">
+        <main className="py-12 pb-28 md:pb-20">
           <div className="container-custom">
             <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.45fr)]">
               <div className="space-y-4">
@@ -714,7 +714,7 @@ const ProductDetailPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-12 pb-20">
+      <main className="py-12 pb-28 md:pb-20">
         <div className="container-custom">
           <Link
             to="/shop"
@@ -725,30 +725,6 @@ const ProductDetailPage = () => {
           </Link>
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.55fr)] lg:items-start lg:gap-16">
-            <section className="order-1 min-w-0 md:order-2 lg:pr-4">
-              <h1
-                className="text-3xl font-bold text-balance md:text-4xl"
-                style={{ letterSpacing: '-0.02em' }}
-              >
-                {product.name}
-              </h1>
-
-              <div className="mt-4 flex flex-wrap items-end gap-3">
-                <p className="text-3xl font-bold font-variant-tabular">
-                  ${formatPrice(displayPrice)}
-                </p>
-                {hasSalePrice && (
-                  <p className="text-lg font-medium text-muted-foreground line-through font-variant-tabular">
-                    ${formatPrice(displayRegularPrice)}
-                  </p>
-                )}
-              </div>
-
-              <p className="mt-3 text-sm font-medium text-muted-foreground">
-                {availabilityText}
-              </p>
-            </section>
-
             <section className="order-2 mx-auto w-full max-w-[30rem] md:order-1 lg:max-w-[24rem] xl:max-w-[26rem]">
               <div className="mb-3 aspect-[4/5] max-h-[32rem] overflow-hidden rounded-xl bg-muted sm:aspect-square md:aspect-[4/5]">
                 <img
@@ -776,8 +752,32 @@ const ProductDetailPage = () => {
               )}
             </section>
 
-            <section className="order-3 min-w-0 md:order-3 lg:pr-4">
-              <div className="rounded-2xl border border-border/70 bg-background/95 p-5 shadow-sm backdrop-blur lg:sticky lg:top-24">
+            <section className="order-1 min-w-0 md:order-2 lg:pr-4">
+              <div>
+                <h1
+                  className="text-3xl font-bold text-balance md:text-4xl"
+                  style={{ letterSpacing: '-0.02em' }}
+                >
+                  {product.name}
+                </h1>
+
+                <div className="mt-4 flex flex-wrap items-end gap-3">
+                  <p className="text-3xl font-bold font-variant-tabular">
+                    ${formatPrice(displayPrice)}
+                  </p>
+                  {hasSalePrice && (
+                    <p className="text-lg font-medium text-muted-foreground line-through font-variant-tabular">
+                      ${formatPrice(displayRegularPrice)}
+                    </p>
+                  )}
+                </div>
+
+                <p className="mt-3 text-sm font-medium text-muted-foreground">
+                  {availabilityText}
+                </p>
+              </div>
+
+              <div className="mt-8 rounded-2xl border border-border/70 bg-background/95 p-5 shadow-sm backdrop-blur lg:sticky lg:top-24">
                 {hasRealVariationData && (
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
@@ -885,7 +885,7 @@ const ProductDetailPage = () => {
                   </div>
                 </div>
 
-                <Button onClick={addToCart} size="lg" className="mt-5 w-full" disabled={!canAddToCart}>
+                <Button onClick={addToCart} size="lg" className="mt-5 hidden w-full md:flex" disabled={!canAddToCart}>
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   {addToCartLabel}
                 </Button>
@@ -899,10 +899,8 @@ const ProductDetailPage = () => {
                   </ul>
                 </div>
               </div>
-            </section>
 
-            <section className="order-4 min-w-0 md:order-4 lg:pr-4">
-              <div className="max-w-prose">
+              <div className="mt-8 max-w-prose">
                 {descriptionExpanded ? (
                   <div
                     className="space-y-4 leading-relaxed text-muted-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
@@ -959,6 +957,19 @@ const ProductDetailPage = () => {
           )}
         </div>
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
+        <div className="container-custom flex items-center gap-3 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-lg font-semibold font-variant-tabular">${formatPrice(displayPrice)}</p>
+            <p className="text-xs text-muted-foreground">{availabilityText}</p>
+          </div>
+          <Button onClick={addToCart} size="lg" className="shrink-0 px-5" disabled={!canAddToCart}>
+            <ShoppingCart className="mr-2 h-5 w-5" />
+            {canAddToCart ? 'Add to cart' : addToCartLabel}
+          </Button>
+        </div>
+      </div>
 
       <Footer />
     </>
