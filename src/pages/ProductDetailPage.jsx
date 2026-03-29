@@ -13,9 +13,6 @@ import CartDrawer from '@/components/CartDrawer.jsx';
 
 const FALLBACK_DESCRIPTION = 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.';
 const DESCRIPTION_PREVIEW_LENGTH = 220;
-const DEFAULT_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL'];
-const DEFAULT_COLOR_OPTIONS = ['Black', 'White', 'Forest Green', 'Earth Brown'];
-
 const COLOR_SWATCH_MAP = {
   black: '#111827',
   white: '#f8fafc',
@@ -372,21 +369,9 @@ const ProductDetailPage = () => {
   const rawColorLabels = extractAttributeOptions(product, isColorAttribute);
   const variationSizeLabels = uniqueLabels(variationEntries.map((variation) => variation.attributes.size));
   const variationColorLabels = uniqueLabels(variationEntries.map((variation) => variation.attributes.color || variation.attributes.colour));
-  const hasRealVariantData = rawSizeLabels.length > 0 || rawColorLabels.length > 0 || variationEntries.length > 0;
-  const sizeLabels = rawSizeLabels.length > 0
-    ? rawSizeLabels
-    : variationSizeLabels.length > 0
-      ? variationSizeLabels
-      : hasRealVariantData
-        ? []
-        : DEFAULT_SIZE_OPTIONS;
-  const colorLabels = rawColorLabels.length > 0
-    ? rawColorLabels
-    : variationColorLabels.length > 0
-      ? variationColorLabels
-      : hasRealVariantData
-        ? []
-        : DEFAULT_COLOR_OPTIONS;
+  const hasRealVariationData = variationEntries.length > 0;
+  const sizeLabels = rawSizeLabels.length > 0 ? rawSizeLabels : variationSizeLabels;
+  const colorLabels = rawColorLabels.length > 0 ? rawColorLabels : variationColorLabels;
 
   const buildVariantOption = (kind, label) => {
     const normalizedLabel = normalizeOptionValue(label);
@@ -422,8 +407,8 @@ const ProductDetailPage = () => {
     return { label, disabled: !matches };
   };
 
-  const sizeOptions = sizeLabels.map((label) => buildVariantOption('size', label));
-  const colorOptions = colorLabels.map((label) => buildVariantOption('color', label));
+  const sizeOptions = hasRealVariationData ? sizeLabels.map((label) => buildVariantOption('size', label)) : [];
+  const colorOptions = hasRealVariationData ? colorLabels.map((label) => buildVariantOption('color', label)) : [];
 
   const selectedSizeDisabled = selectedSize
     ? !sizeOptions.some((option) => option.label === selectedSize && !option.disabled)
@@ -445,7 +430,7 @@ const ProductDetailPage = () => {
   if (sizeOptions.length > 0 && !selectedSize) missingSelections.push('size');
   if (colorOptions.length > 0 && !selectedColor) missingSelections.push('color');
 
-  const canClearSelections = Boolean(selectedSize || selectedColor);
+  const canClearSelections = hasRealVariationData && Boolean(selectedSize || selectedColor);
   const canAddToCart = productInStock && missingSelections.length === 0 && !selectedSizeDisabled && !selectedColorDisabled;
   const addToCartLabel = !productInStock
     ? 'Out of stock'
@@ -460,7 +445,7 @@ const ProductDetailPage = () => {
 
   const addToCart = () => {
     if (!product || !canAddToCart) {
-      toast.error('Please choose an available size and color first');
+      toast.error(hasRealVariationData ? 'Please choose an available size and color first' : 'This product is currently unavailable');
       return;
     }
 
@@ -646,20 +631,22 @@ const ProductDetailPage = () => {
               <Separator className="my-6" />
 
               <div className="mb-6 rounded-2xl border border-border/70 bg-background/95 p-5 shadow-sm backdrop-blur lg:sticky lg:top-24">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">Choose your options</p>
-                    <p className="text-xs text-muted-foreground">Select an available size and color before adding to cart.</p>
+                {hasRealVariationData && (
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Choose your options</p>
+                      <p className="text-xs text-muted-foreground">Select an available size and color before adding to cart.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClearSelections}
+                      disabled={!canClearSelections}
+                      className="text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                    >
+                      Clear
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleClearSelections}
-                    disabled={!canClearSelections}
-                    className="text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80 disabled:cursor-not-allowed disabled:text-muted-foreground"
-                  >
-                    Clear
-                  </button>
-                </div>
+                )}
 
                 <div className="space-y-5">
                   {sizeOptions.length > 0 && (
