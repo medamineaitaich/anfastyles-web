@@ -63,6 +63,11 @@ const extractCheckoutErrorMessage = (checkoutData, fallback = 'Payment failed') 
   );
 };
 
+const sectionCardClassName = 'bg-card border border-border/60 rounded-2xl p-5 md:p-6';
+const actionRowClassName = 'mt-5 flex flex-col-reverse gap-3 sm:flex-row';
+const optionListClassName = 'mt-1 overflow-hidden rounded-xl border border-border/60 bg-background/40';
+const paymentPanelClassName = 'mt-5 rounded-xl bg-muted/30 p-4 md:p-5';
+
 const normalizePaymentMethods = (methods) => {
   if (!Array.isArray(methods)) return [];
 
@@ -627,7 +632,7 @@ const CheckoutPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-12">
+      <main className="py-8 md:py-12">
         <div className="container-custom max-w-5xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-8 text-balance" style={{ letterSpacing: '-0.02em' }}>
             Checkout
@@ -644,11 +649,11 @@ const CheckoutPage = () => {
             ))}
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
             <div className="lg:col-span-2">
               {step === 1 && (
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-6">
+                <div className={sectionCardClassName}>
+                  <div className="mb-6 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <MapPin className="w-5 h-5 text-primary" />
                     </div>
@@ -767,15 +772,15 @@ const CheckoutPage = () => {
                     </div>
                   </div>
 
-                  <Button onClick={handleNextStep} size="lg" className="w-full mt-6">
+                  <Button onClick={handleNextStep} size="lg" className="mt-5 w-full">
                     Continue to shipping
                   </Button>
                 </div>
               )}
 
               {step === 2 && (
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-6">
+                <div className={sectionCardClassName}>
+                  <div className="mb-6 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Truck className="w-5 h-5 text-primary" />
                     </div>
@@ -783,8 +788,8 @@ const CheckoutPage = () => {
                   </div>
 
                   <RadioGroup value={formData.shippingMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, shippingMethod: value }))}>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                    <div className={optionListClassName}>
+                      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <RadioGroupItem value="standard" id="standard" />
                           <Label htmlFor="standard" className="cursor-pointer">
@@ -795,7 +800,7 @@ const CheckoutPage = () => {
                         <span className="font-semibold">{cart.subtotal >= 75 ? 'Free' : '$10.00'}</span>
                       </div>
 
-                      <div className="flex items-center justify-between p-4 border border-border rounded-lg">
+                      <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <RadioGroupItem value="express" id="express" />
                           <Label htmlFor="express" className="cursor-pointer">
@@ -808,7 +813,7 @@ const CheckoutPage = () => {
                     </div>
                   </RadioGroup>
 
-                  <div className="flex gap-3 mt-6">
+                  <div className={actionRowClassName}>
                     <Button onClick={() => setStep(1)} variant="outline" size="lg" className="flex-1">
                       Back
                     </Button>
@@ -820,8 +825,8 @@ const CheckoutPage = () => {
               )}
 
               {step === 3 && (
-                <div className="bg-card border border-border rounded-xl p-6">
-                  <div className="flex items-center gap-3 mb-6">
+                <div className={sectionCardClassName}>
+                  <div className="mb-5 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <CreditCard className="w-5 h-5 text-primary" />
                     </div>
@@ -832,9 +837,14 @@ const CheckoutPage = () => {
                      <p className="text-sm text-muted-foreground">Loading payment methods...</p>
                    ) : (
                      <RadioGroup value={formData.paymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}>
-                       <div className="space-y-3">
-                         {availablePaymentMethods.map((method) => (
-                           <div key={method} className="flex items-center gap-3 p-4 border border-border rounded-lg">
+                       <div className={optionListClassName}>
+                         {availablePaymentMethods.map((method, index) => (
+                           <div
+                             key={method}
+                             className={`flex items-start gap-3 px-4 py-3.5 ${
+                               index > 0 ? 'border-t border-border/60' : ''
+                             }`}
+                           >
                              <RadioGroupItem value={method} id={method} />
                              <Label htmlFor={method} className="cursor-pointer">
                                <p className="font-semibold">{getPaymentMethodLabel(method)}</p>
@@ -847,7 +857,7 @@ const CheckoutPage = () => {
                    )}
 
                    {formData.paymentMethod === 'stripe' && (
-                     <div className="mt-6">
+                     <div className="mt-5">
                        {!stripePublishableKey && (
                          <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
                       )}
@@ -856,9 +866,9 @@ const CheckoutPage = () => {
                         <Elements
                           stripe={stripePromise}
                         >
-                          <div className="p-4 border border-border rounded-lg">
+                          <div className={paymentPanelClassName}>
                             <Label className="cursor-default">Card details</Label>
-                            <div className="mt-3 rounded-lg border border-border bg-background p-3">
+                            <div className="mt-3 rounded-lg bg-background px-3 py-3">
                               <CardElement options={{ hidePostalCode: true }} />
                             </div>
                             <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
@@ -866,7 +876,7 @@ const CheckoutPage = () => {
 
                           <ElementsConsumer>
                             {({ stripe, elements }) => (
-                              <div className="flex gap-3 mt-6">
+                              <div className={actionRowClassName}>
                                 <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
                                   Back
                                 </Button>
@@ -885,7 +895,7 @@ const CheckoutPage = () => {
                       )}
 
                       {!stripePromise && (
-                        <div className="flex gap-3 mt-6">
+                        <div className={actionRowClassName}>
                           <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
                             Back
                           </Button>
@@ -898,13 +908,13 @@ const CheckoutPage = () => {
                    )}
 
                    {formData.paymentMethod === 'cod' && (
-                     <div className="mt-6">
-                       <div className="p-4 border border-border rounded-lg">
+                     <div className="mt-5">
+                       <div className={paymentPanelClassName}>
                          <p className="font-semibold">Cash on delivery</p>
                          <p className="text-sm text-muted-foreground mt-1">Your order will be submitted with WooCommerce Cash on Delivery.</p>
                        </div>
 
-                       <div className="flex gap-3 mt-6">
+                       <div className={actionRowClassName}>
                          <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
                            Back
                          </Button>
@@ -921,9 +931,9 @@ const CheckoutPage = () => {
                    )}
 
                    {formData.paymentMethod === 'woocommerce_payments' && (
-                     <div className="mt-6">
+                     <div className="mt-5">
                        {!!wooPaymentsConfigError && (
-                         <div className="p-4 border border-destructive/30 rounded-lg bg-destructive/5">
+                         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
                            <p className="font-semibold">WooPayments unavailable</p>
                            <p className="text-sm text-muted-foreground mt-1">{wooPaymentsConfigError}</p>
                          </div>
@@ -931,9 +941,9 @@ const CheckoutPage = () => {
 
                        {!!wooPaymentsStripePromise && !!wooPaymentsElementsOptions && !wooPaymentsConfigError && (
                          <Elements stripe={wooPaymentsStripePromise} options={wooPaymentsElementsOptions}>
-                           <div className="p-4 border border-border rounded-lg">
+                           <div className={paymentPanelClassName}>
                              <Label className="cursor-default">Card details</Label>
-                             <div className="mt-3 rounded-lg border border-border bg-background p-3">
+                             <div className="mt-3 rounded-lg bg-background px-3 py-3">
                                <PaymentElement />
                              </div>
                              <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
@@ -941,7 +951,7 @@ const CheckoutPage = () => {
 
                            <ElementsConsumer>
                              {({ stripe, elements }) => (
-                               <div className="flex gap-3 mt-6">
+                               <div className={actionRowClassName}>
                                  <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
                                    Back
                                  </Button>
@@ -961,12 +971,12 @@ const CheckoutPage = () => {
 
                        {(!wooPaymentsStripePromise || !wooPaymentsElementsOptions) && !wooPaymentsConfigError && (
                          <>
-                           <div className="p-4 border border-border rounded-lg">
+                           <div className={paymentPanelClassName}>
                              <p className="font-semibold">WooPayments</p>
                              <p className="text-sm text-muted-foreground mt-1">Loading secure WooPayments form...</p>
                            </div>
 
-                           <div className="flex gap-3 mt-6">
+                           <div className={actionRowClassName}>
                              <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
                                Back
                              </Button>
@@ -978,7 +988,7 @@ const CheckoutPage = () => {
                        )}
 
                        {!!wooPaymentsConfigError && (
-                         <div className="flex gap-3 mt-6">
+                         <div className={actionRowClassName}>
                            <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
                              Back
                            </Button>
@@ -994,7 +1004,7 @@ const CheckoutPage = () => {
             </div>
 
             <div className="lg:col-span-1">
-              <div className="bg-card border border-border rounded-xl p-6 sticky top-24">
+              <div className="sticky top-24 rounded-2xl border border-border/60 bg-card p-5 md:p-6">
                 <h2 className="text-xl font-bold mb-4">Order summary</h2>
 
                 {cart.items.length > 0 && (
