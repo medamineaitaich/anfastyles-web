@@ -12,6 +12,74 @@ import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
+const FALLBACK_DESCRIPTION = 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.';
+const DESCRIPTION_PREVIEW_LENGTH = 220;
+
+const extractTextFromHtml = (value) => {
+  if (typeof value !== 'string' || !value.trim()) return '';
+
+  if (typeof DOMParser !== 'undefined') {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(value, 'text/html');
+    return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
+const sanitizeDescriptionHtml = (value) => {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  if (typeof DOMParser === 'undefined') return value;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(value, 'text/html');
+  const allowedTags = new Set(['p', 'br', 'ul', 'ol', 'li', 'strong', 'em', 'b', 'i', 'a']);
+  const elementNode = 1;
+  const commentNode = 8;
+
+  const cleanNode = (node) => {
+    for (const child of [...node.childNodes]) {
+      if (child.nodeType === commentNode) {
+        child.remove();
+        continue;
+      }
+
+      if (child.nodeType !== elementNode) continue;
+
+      const tagName = child.tagName.toLowerCase();
+      if (!allowedTags.has(tagName)) {
+        if (tagName === 'script' || tagName === 'style') {
+          child.remove();
+          continue;
+        }
+
+        cleanNode(child);
+        child.replaceWith(...child.childNodes);
+        continue;
+      }
+
+      for (const attribute of [...child.attributes]) {
+        if (tagName === 'a' && attribute.name === 'href') {
+          const href = attribute.value.trim();
+          if (/^(https?:|mailto:|tel:|#)/i.test(href)) continue;
+        }
+
+        child.removeAttribute(attribute.name);
+      }
+
+      if (tagName === 'a') {
+        child.setAttribute('rel', 'noreferrer');
+        child.setAttribute('target', '_blank');
+      }
+
+      cleanNode(child);
+    }
+  };
+
+  cleanNode(doc.body);
+  return doc.body.innerHTML.trim();
+};
+
 const ProductDetailPage = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
@@ -21,6 +89,7 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   const toNumber = (value, fallback) => {
@@ -51,6 +120,10 @@ const ProductDetailPage = () => {
     fetchProduct();
     fetchRelatedProducts();
   }, [id]);
+
+  useEffect(() => {
+    setDescriptionExpanded(false);
+  }, [product?.id]);
 
   const fetchProduct = async () => {
     setLoading(true);
@@ -123,7 +196,7 @@ const ProductDetailPage = () => {
           <div className="container-custom">
             <div className="grid gap-12 md:grid-cols-2">
               <div className="space-y-4">
-                <Skeleton className="aspect-square w-full rounded-xl" />
+                <Skeleton className="aspect-[4/5] w-full rounded-xl sm:aspect-square md:aspect-[4/5]" />
                 <div className="grid grid-cols-4 gap-2">
                   {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
                 </div>
@@ -161,6 +234,13 @@ const ProductDetailPage = () => {
 
   const images = normalizeImages(product.images, product.image);
   const averageRating = toNumber(product.rating, 4.5);
+  const descriptionSource = product.description || FALLBACK_DESCRIPTION;
+  const descriptionText = extractTextFromHtml(descriptionSource) || FALLBACK_DESCRIPTION;
+  const sanitizedDescriptionHtml = sanitizeDescriptionHtml(descriptionSource) || `<p>${FALLBACK_DESCRIPTION}</p>`;
+  const hasLongDescription = descriptionText.length > DESCRIPTION_PREVIEW_LENGTH;
+  const collapsedDescription = hasLongDescription
+    ? `${descriptionText.slice(0, DESCRIPTION_PREVIEW_LENGTH).trimEnd()}...`
+    : descriptionText;
 
   return (
     <>
@@ -168,7 +248,7 @@ const ProductDetailPage = () => {
         <title>{`${product.name} - AnfaStyles`}</title>
         <meta
           name="description"
-          content={product.description?.substring(0, 160) || `Shop ${product.name} at AnfaStyles`}
+          content={descriptionText.substring(0, 160) || `Shop ${product.name} at AnfaStyles`}
         />
       </Helmet>
 
@@ -185,9 +265,9 @@ const ProductDetailPage = () => {
             Back to shop
           </Link>
 
-          <div className="grid gap-12 md:grid-cols-2">
-            <div>
-              <div className="mb-4 aspect-square overflow-hidden rounded-xl bg-muted">
+          <div className="grid gap-10 md:grid-cols-2 lg:items-start lg:gap-16">
+            <div className="mx-auto w-full max-w-[34rem]">
+              <div className="mb-4 aspect-[4/5] max-h-[34rem] overflow-hidden rounded-xl bg-muted sm:aspect-square md:aspect-[4/5]">
                 <img
                   src={images[selectedImage] || 'https://images.unsplash.com/photo-1618815909724-861120595390'}
                   alt={product.name}
@@ -195,7 +275,7 @@ const ProductDetailPage = () => {
                 />
               </div>
               {images.length > 1 && (
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 md:grid-cols-4">
                   {images.map((img, index) => (
                     <button
                       key={index}
@@ -211,7 +291,7 @@ const ProductDetailPage = () => {
               )}
             </div>
 
-            <div>
+            <div className="min-w-0">
               <h1
                 className="mb-3 text-3xl font-bold text-balance md:text-4xl"
                 style={{ letterSpacing: '-0.02em' }}
@@ -235,9 +315,36 @@ const ProductDetailPage = () => {
 
               <p className="mb-6 text-3xl font-bold font-variant-tabular">${formatPrice(product.price)}</p>
 
-              <p className="mb-6 max-w-prose leading-relaxed text-muted-foreground">
-                {product.description || 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.'}
-              </p>
+              <div className="mb-6 max-w-prose">
+                {descriptionExpanded ? (
+                  <div
+                    className="space-y-4 leading-relaxed text-muted-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
+                    dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
+                  />
+                ) : (
+                  <p
+                    className="leading-relaxed text-muted-foreground"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: 3,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {collapsedDescription}
+                  </p>
+                )}
+
+                {hasLongDescription && (
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionExpanded((current) => !current)}
+                    className="mt-3 text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80"
+                  >
+                    {descriptionExpanded ? 'Read less' : 'Read more'}
+                  </button>
+                )}
+              </div>
 
               <Separator className="my-6" />
 
