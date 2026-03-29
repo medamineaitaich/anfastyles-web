@@ -38,7 +38,30 @@ const CheckoutPage = () => {
   });
 
   const [errors, setErrors] = useState({});
-  const stripePublishableKey = import.meta?.env?.VITE_STRIPE_PUBLISHABLE_KEY;
+  const envStripePublishableKey = import.meta?.env?.VITE_STRIPE_PUBLISHABLE_KEY;
+  const [stripePublishableKey, setStripePublishableKey] = useState(import.meta.env.DEV ? (envStripePublishableKey || '') : '');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadStripeKey = async () => {
+      try {
+        const res = await apiServerClient.fetch('/payments/stripe/publishable-key');
+        const json = await res.json().catch(() => null);
+        if (!res.ok) return;
+        const key = String(json?.publishableKey || '').trim();
+        if (!key) return;
+        if (!cancelled) setStripePublishableKey(key);
+      } catch {
+        // Fallback to env key.
+      }
+    };
+
+    loadStripeKey();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const savedCart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0}');
@@ -115,13 +138,18 @@ const CheckoutPage = () => {
             body: body ? JSON.stringify(body) : undefined,
           });
 
-          const json = await res.json().catch(() => null);
-          if (!res.ok) {
-            const message = json?.error || json?.message || 'Store checkout failed';
+           const json = await res.json().catch(() => null);
+           if (!res.ok) {
+            const message =
+              json?.details?.message ||
+              json?.details?.error ||
+              json?.error ||
+              json?.message ||
+              'Store checkout failed';
             const err = new Error(message);
             err.details = json;
             throw err;
-          }
+           }
 
           return json;
         };
