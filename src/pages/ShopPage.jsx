@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,19 +14,73 @@ import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 
+const DEFAULT_CATEGORY = 'all';
+const DEFAULT_SORT = 'popularity';
+const DEFAULT_PAGE = 1;
+const VALID_CATEGORIES = new Set(['all', 'apparel', 'accessories', 'home']);
+const VALID_SORTS = new Set(['popularity', 'newest', 'price_asc', 'price_desc']);
+
+const normalizeCategory = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return VALID_CATEGORIES.has(normalized) ? normalized : DEFAULT_CATEGORY;
+};
+
+const normalizeSort = (value) => {
+  const normalized = String(value || '').trim();
+  return VALID_SORTS.has(normalized) ? normalized : DEFAULT_SORT;
+};
+
+const normalizePage = (value) => {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PAGE;
+};
+
 const ShopPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState('all');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [category, setCategory] = useState(() => normalizeCategory(searchParams.get('category')));
   const [priceRange, setPriceRange] = useState([0, 200]);
-  const [sort, setSort] = useState('popularity');
-  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState(() => normalizeSort(searchParams.get('sort')));
+  const [page, setPage] = useState(() => normalizePage(searchParams.get('page')));
   const [totalPages, setTotalPages] = useState(1);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const searchTerm = searchParams.get('search')?.trim() || '';
+  const hasActiveFilters = category !== DEFAULT_CATEGORY || sort !== DEFAULT_SORT;
 
   useEffect(() => {
     fetchProducts();
-  }, [category, sort, page]);
+  }, [category, sort, page, searchTerm]);
+
+  useEffect(() => {
+    const nextCategory = normalizeCategory(searchParams.get('category'));
+    const nextSort = normalizeSort(searchParams.get('sort'));
+    const nextPage = normalizePage(searchParams.get('page'));
+
+    setCategory((current) => current === nextCategory ? current : nextCategory);
+    setSort((current) => current === nextSort ? current : nextSort);
+    setPage((current) => current === nextPage ? current : nextPage);
+  }, [searchParams]);
+
+  const updateQueryParams = (updates) => {
+    const nextParams = new URLSearchParams(searchParams);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      const shouldDelete = value == null
+        || value === ''
+        || (key === 'category' && value === DEFAULT_CATEGORY)
+        || (key === 'sort' && value === DEFAULT_SORT)
+        || (key === 'page' && Number(value) === DEFAULT_PAGE);
+
+      if (shouldDelete) {
+        nextParams.delete(key);
+      } else {
+        nextParams.set(key, String(value));
+      }
+    });
+
+    setSearchParams(nextParams);
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -37,8 +91,12 @@ const ShopPage = () => {
         sort
       });
 
-      if (category !== 'all') {
+      if (category !== DEFAULT_CATEGORY) {
         params.append('category', category);
+      }
+
+      if (searchTerm) {
+        params.append('search', searchTerm);
       }
 
       const response = await apiServerClient.fetch(`/products?${params.toString()}`);
@@ -64,20 +122,68 @@ const ShopPage = () => {
   };
 
   const applyFilters = () => {
-    setPage(1);
-    fetchProducts();
+    if (page !== DEFAULT_PAGE) {
+      setPage(DEFAULT_PAGE);
+    }
+
+    updateQueryParams({
+      category,
+      sort,
+      page: DEFAULT_PAGE,
+    });
+  };
+
+  const handleCategoryChange = (nextCategory) => {
+    setCategory(nextCategory);
+    setPage(DEFAULT_PAGE);
+    updateQueryParams({
+      category: nextCategory,
+      page: DEFAULT_PAGE,
+    });
+  };
+
+  const handleSortChange = (nextSort) => {
+    setSort(nextSort);
+    setPage(DEFAULT_PAGE);
+    updateQueryParams({
+      sort: nextSort,
+      page: DEFAULT_PAGE,
+    });
+  };
+
+  const handlePageChange = (nextPage) => {
+    setPage(nextPage);
+    updateQueryParams({ page: nextPage });
+  };
+
+  const clearFilters = () => {
+    setCategory(DEFAULT_CATEGORY);
+    setPriceRange([0, 200]);
+    setSort(DEFAULT_SORT);
+    setPage(DEFAULT_PAGE);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('category');
+    nextParams.delete('sort');
+    nextParams.delete('page');
+
+    if (!hasActiveFilters && searchTerm) {
+      nextParams.delete('search');
+    }
+
+    setSearchParams(nextParams);
   };
 
   const FilterPanel = () => (
     <div className="space-y-6">
       <div>
         <label className="text-sm font-semibold mb-3 block">Category</label>
-        <Select value={category} onValueChange={setCategory}>
+        <Select value={category} onValueChange={handleCategoryChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All products</SelectItem>
+            <SelectItem value={DEFAULT_CATEGORY}>All products</SelectItem>
             <SelectItem value="apparel">Apparel</SelectItem>
             <SelectItem value="accessories">Accessories</SelectItem>
             <SelectItem value="home">Home goods</SelectItem>
@@ -100,12 +206,12 @@ const ShopPage = () => {
 
       <div>
         <label className="text-sm font-semibold mb-3 block">Sort by</label>
-        <Select value={sort} onValueChange={setSort}>
+        <Select value={sort} onValueChange={handleSortChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="popularity">Popularity</SelectItem>
+            <SelectItem value={DEFAULT_SORT}>Popularity</SelectItem>
             <SelectItem value="newest">Newest</SelectItem>
             <SelectItem value="price_asc">Price: Low to high</SelectItem>
             <SelectItem value="price_desc">Price: High to low</SelectItem>
@@ -141,7 +247,11 @@ const ShopPage = () => {
             >
               Shop collection
             </h1>
-            <p className="text-muted-foreground">Discover sustainable pieces for conscious living</p>
+            <p className="text-muted-foreground">
+              {searchTerm
+                ? `Showing results for "${searchTerm}"`
+                : 'Discover sustainable pieces for conscious living'}
+            </p>
           </div>
 
           <div className="flex gap-8">
@@ -155,7 +265,7 @@ const ShopPage = () => {
             <div className="flex-1">
               <div className="flex justify-between items-center mb-6">
                 <p className="text-sm text-muted-foreground">
-                  {loading ? 'Loading...' : `${products.length} products`}
+                  {loading ? 'Loading...' : `${products.length} product${products.length === 1 ? '' : 's'}`}
                 </p>
 
                 <Sheet>
@@ -192,9 +302,15 @@ const ShopPage = () => {
                     <SlidersHorizontal className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">No products found</h3>
-                  <p className="text-sm text-muted-foreground mb-6">Try adjusting your filters</p>
-                  <Button onClick={() => { setCategory('all'); setPriceRange([0, 200]); }}>
-                    Clear filters
+                  <p className="text-sm text-muted-foreground mb-6">
+                    {searchTerm && hasActiveFilters
+                      ? `No results matched "${searchTerm}" with the current filters.`
+                      : searchTerm
+                      ? `No results matched "${searchTerm}". Try another search or adjust your filters.`
+                      : 'Try adjusting your filters'}
+                  </p>
+                  <Button onClick={clearFilters}>
+                    {!hasActiveFilters && searchTerm ? 'Clear search' : 'Clear filters'}
                   </Button>
                 </div>
               ) : (
@@ -222,7 +338,7 @@ const ShopPage = () => {
                     <div className="flex justify-center gap-2 mt-12">
                       <Button
                         variant="outline"
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        onClick={() => handlePageChange(Math.max(DEFAULT_PAGE, page - 1))}
                         disabled={page === 1}
                       >
                         Previous
@@ -232,7 +348,7 @@ const ShopPage = () => {
                           <Button
                             key={i}
                             variant={page === i + 1 ? 'default' : 'outline'}
-                            onClick={() => setPage(i + 1)}
+                            onClick={() => handlePageChange(i + 1)}
                             size="sm"
                           >
                             {i + 1}
@@ -241,7 +357,7 @@ const ShopPage = () => {
                       </div>
                       <Button
                         variant="outline"
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
                         disabled={page === totalPages}
                       >
                         Next

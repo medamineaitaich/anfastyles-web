@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X, Leaf } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Search, ShoppingCart, User, Menu, Leaf } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Header = ({ onCartClick }) => {
   const location = useLocation();
-  const { authenticated, user } = useAuth();
+  const navigate = useNavigate();
+  const { authenticated } = useAuth();
   const [cartCount, setCartCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     updateCartCount();
@@ -17,9 +20,32 @@ const Header = ({ onCartClick }) => {
     return () => window.removeEventListener('cartUpdated', updateCartCount);
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchTerm(params.get('search') || '');
+  }, [location.search]);
+
   const updateCartCount = () => {
     const cart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"itemCount":0}');
     setCartCount(cart.itemCount || 0);
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+
+    const nextSearch = searchTerm.trim();
+    const params = new URLSearchParams();
+
+    if (nextSearch) {
+      params.set('search', nextSearch);
+    }
+
+    navigate({
+      pathname: '/shop',
+      search: params.toString() ? `?${params.toString()}` : '',
+    });
+
+    setMobileMenuOpen(false);
   };
 
   const navLinks = [
@@ -62,11 +88,20 @@ const Header = ({ onCartClick }) => {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="hidden sm:flex">
+          <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center gap-2 flex-1 max-w-sm">
+            <Input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search products"
+              aria-label="Search products"
+            />
+            <Button type="submit" variant="ghost" size="icon" aria-label="Search">
               <Search className="w-5 h-5" />
             </Button>
-            
+          </form>
+
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -103,6 +138,18 @@ const Header = ({ onCartClick }) => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px]">
                 <nav className="flex flex-col gap-4 mt-8">
+                  <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+                    <Input
+                      type="search"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Search products"
+                      aria-label="Search products"
+                    />
+                    <Button type="submit" variant="ghost" size="icon" aria-label="Search">
+                      <Search className="w-5 h-5" />
+                    </Button>
+                  </form>
                   {navLinks.map((link) => (
                     <Link
                       key={link.path}
