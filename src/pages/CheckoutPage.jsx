@@ -687,7 +687,7 @@ const CheckoutPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-8 pb-28 md:py-12 md:pb-12">
+      <main className="py-8 pb-28 overflow-x-hidden md:py-12 md:pb-12">
         <div className="container-custom max-w-5xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-3 text-balance" style={{ letterSpacing: '-0.02em' }}>
             Checkout
@@ -697,8 +697,8 @@ const CheckoutPage = () => {
           </p>
 
           <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
-            <div className="lg:col-span-2">
-              <div className={`${sectionCardClassName} -mx-2 px-4 sm:mx-0 sm:px-5 md:px-6`}>
+            <div className="lg:col-span-2 space-y-6">
+              <div className={sectionCardClassName}>
                   <div className="mb-6 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <MapPin className="w-5 h-5 text-primary" />
@@ -836,26 +836,26 @@ const CheckoutPage = () => {
 
                   <RadioGroup value={formData.shippingMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, shippingMethod: value }))}>
                     <div className={optionListClassName}>
-                      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-start justify-between gap-3 px-4 py-3.5 sm:items-center">
+                        <div className="flex min-w-0 items-start gap-3 sm:items-center">
                           <RadioGroupItem value="standard" id="standard" />
-                          <Label htmlFor="standard" className="cursor-pointer">
+                          <Label htmlFor="standard" className="cursor-pointer break-words">
                             <p className="font-semibold">Standard shipping</p>
                             <p className="text-sm text-muted-foreground">5-7 business days</p>
                           </Label>
                         </div>
-                        <span className="font-semibold">{cart.subtotal >= 75 ? 'Free' : '$10.00'}</span>
+                        <span className="font-semibold shrink-0">{cart.subtotal >= 75 ? 'Free' : '$10.00'}</span>
                       </div>
 
-                      <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3.5">
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-start justify-between gap-3 border-t border-border/60 px-4 py-3.5 sm:items-center">
+                        <div className="flex min-w-0 items-start gap-3 sm:items-center">
                           <RadioGroupItem value="express" id="express" />
-                          <Label htmlFor="express" className="cursor-pointer">
+                          <Label htmlFor="express" className="cursor-pointer break-words">
                             <p className="font-semibold">Express shipping</p>
                             <p className="text-sm text-muted-foreground">2-3 business days</p>
                           </Label>
                         </div>
-                        <span className="font-semibold">$25.00</span>
+                        <span className="font-semibold shrink-0">$25.00</span>
                       </div>
                     </div>
                   </RadioGroup>
@@ -886,10 +886,10 @@ const CheckoutPage = () => {
                              }`}
                            >
                              <RadioGroupItem value={method} id={method} />
-                             <Label htmlFor={method} className="cursor-pointer">
-                               <p className="font-semibold">{getPaymentMethodLabel(method)}</p>
-                               <p className="text-sm text-muted-foreground">{getPaymentMethodDescription(method)}</p>
-                             </Label>
+                              <Label htmlFor={method} className="cursor-pointer break-words">
+                                <p className="font-semibold">{getPaymentMethodLabel(method)}</p>
+                                <p className="text-sm text-muted-foreground">{getPaymentMethodDescription(method)}</p>
+                              </Label>
                            </div>
                          ))}
                        </div>
@@ -1044,7 +1044,7 @@ const CheckoutPage = () => {
               onClick={handleCheckoutSubmit}
               disabled={placeOrderDisabled}
               size="lg"
-              className="min-w-[170px]"
+              className="min-w-[152px] sm:min-w-[170px]"
             >
               {loading ? 'Processing...' : 'Place order'}
             </Button>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Truck, Leaf, Award, Users, ChevronRight, Star } from 'lucide-react';
+import { Truck, Leaf, Award, Users, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -12,6 +12,7 @@ import apiServerClient from '@/lib/apiServerClient';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
+import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 
 const HomePage = () => {
   const [homeProducts, setHomeProducts] = useState([]);
@@ -272,17 +273,7 @@ const HomePage = () => {
                         </div>
                       <div className="p-4">
                         <h3 className="font-semibold mb-1 truncate">{product.name}</h3>
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-3 h-3 ${i < Math.floor(product.rating || 4.5) ? 'fill-primary text-primary' : 'text-muted'}`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-xs text-muted-foreground">({product.reviewCount || 0})</span>
-                        </div>
+                        <ProductRatingStars className="mb-2" showLabel />
                         <p className="font-semibold text-lg font-variant-tabular">${formatPrice(product.price)}</p>
                       </div>
                     </Link>

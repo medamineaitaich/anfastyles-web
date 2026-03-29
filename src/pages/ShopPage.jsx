@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
-import { Star, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -12,6 +12,7 @@ import apiServerClient from '@/lib/apiServerClient';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
+import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 
 const ShopPage = () => {
   const [products, setProducts] = useState([]);
@@ -176,7 +177,7 @@ const ShopPage = () => {
               </div>
 
               {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div key={i} className="space-y-3">
                       <Skeleton className="w-full aspect-square rounded-xl" />
@@ -198,7 +199,7 @@ const ShopPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {products.map((product) => (
                       <Link key={product.id} to={`/product/${product.id}`} className="card-product block">
                         <div className="aspect-square bg-muted overflow-hidden">
@@ -210,17 +211,7 @@ const ShopPage = () => {
                         </div>
                         <div className="p-4">
                           <h3 className="font-semibold mb-1 truncate">{product.name}</h3>
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`w-3 h-3 ${i < Math.floor(product.rating || 4.5) ? 'fill-primary text-primary' : 'text-muted'}`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-xs text-muted-foreground">({product.reviewCount || 0})</span>
-                          </div>
+                          <ProductRatingStars className="mb-2" showLabel />
                           <p className="font-semibold text-lg font-variant-tabular">${parseFloat(product.price).toFixed(2)}</p>
                         </div>
                       </Link>

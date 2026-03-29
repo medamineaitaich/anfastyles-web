@@ -63,7 +63,7 @@ const CartPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-12">
+      <main className="py-10 md:py-12 overflow-x-hidden">
         <div className="container-custom">
           <h1 className="text-4xl md:text-5xl font-bold mb-8 text-balance" style={{ letterSpacing: '-0.02em' }}>
             Shopping cart
@@ -81,10 +81,10 @@ const CartPage = () => {
               </Link>
             </div>
           ) : (
-            <div className="grid lg:grid-cols-3 gap-8">
+            <div className="grid gap-6 md:gap-8 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 {cart.subtotal < 75 && (
-                  <div className="bg-muted rounded-xl p-6 mb-6">
+                  <div className="bg-muted rounded-xl p-4 sm:p-6 mb-6">
                     <p className="text-sm font-medium mb-3">
                       Add ${(75 - cart.subtotal).toFixed(2)} more for free shipping
                     </p>
@@ -99,12 +99,12 @@ const CartPage = () => {
 
                 <div className="space-y-4">
                   {cart.items.map((item) => (
-                    <div key={`${item.productId}-${item.size}-${item.color}`} className="bg-card border border-border rounded-xl p-6">
-                      <div className="flex gap-6">
+                    <div key={`${item.productId}-${item.size}-${item.color}`} className="bg-card border border-border rounded-xl p-4 sm:p-6">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-24 h-24 object-cover rounded-lg bg-muted flex-shrink-0"
+                          className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg bg-muted flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold mb-1 truncate">{item.name}</h3>
@@ -112,7 +112,7 @@ const CartPage = () => {
                             {item.size && <p>Size: {item.size.toUpperCase()}</p>}
                             {item.color && <p>Color: {item.color}</p>}
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-3">
                             <Button
                               variant="outline"
                               size="icon"
@@ -132,7 +132,7 @@ const CartPage = () => {
                             </Button>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end justify-between">
+                        <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-between sm:gap-0">
                           <p className="font-semibold text-lg font-variant-tabular">
                             ${(parseFloat(item.price) * item.quantity).toFixed(2)}
                           </p>
@@ -153,7 +153,7 @@ const CartPage = () => {
               </div>
 
               <div className="lg:col-span-1">
-                <div className="bg-card border border-border rounded-xl p-6 sticky top-24">
+                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 sticky top-24">
                   <h2 className="text-xl font-bold mb-4">Order summary</h2>
                   
                   <div className="space-y-3 mb-4">

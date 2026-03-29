@@ -9,6 +9,7 @@ import apiServerClient from '@/lib/apiServerClient';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
+import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 
 const FALLBACK_DESCRIPTION = 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.';
 const DESCRIPTION_PREVIEW_LENGTH = 220;
@@ -744,6 +745,8 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
+              <ProductRatingStars className="mt-3" starClassName="h-4 w-4" showLabel label="5.0 rating" />
+
               <p className="mt-3 text-sm font-medium text-muted-foreground">
                 {availabilityText}
               </p>
@@ -950,6 +953,7 @@ const ProductDetailPage = () => {
                     </div>
                     <div className="p-4">
                       <h3 className="mb-1 truncate text-sm font-semibold">{relatedProduct.name}</h3>
+                      <ProductRatingStars className="mb-2" showLabel />
                       <p className="font-semibold font-variant-tabular">${formatPrice(relatedProduct.price)}</p>
                     </div>
                   </Link>
