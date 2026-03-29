@@ -65,7 +65,7 @@ const extractCheckoutErrorMessage = (checkoutData, fallback = 'Payment failed') 
 
 const sectionCardClassName = 'bg-card border border-border/60 rounded-2xl p-5 md:p-6';
 const optionListClassName = 'mt-1 overflow-hidden rounded-xl border border-border/60 bg-background/40';
-const paymentPanelClassName = 'mt-5 rounded-xl bg-muted/30 p-4 md:p-5';
+const paymentPanelClassName = 'mt-4 rounded-xl bg-muted/30 p-3 md:mt-5 md:p-5';
 
 const StripeElementsBridge = ({ onChange }) => {
   const stripe = useStripe();
@@ -698,7 +698,7 @@ const CheckoutPage = () => {
 
           <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
             <div className="lg:col-span-2">
-              <div className={sectionCardClassName}>
+              <div className={`${sectionCardClassName} -mx-2 px-4 sm:mx-0 sm:px-5 md:px-6`}>
                   <div className="mb-6 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <MapPin className="w-5 h-5 text-primary" />
@@ -909,7 +909,7 @@ const CheckoutPage = () => {
                           <StripeElementsBridge onChange={handleStripeContextChange} />
                           <div className={paymentPanelClassName}>
                             <Label className="cursor-default">Card details</Label>
-                            <div className="mt-3 rounded-lg bg-background px-3 py-3">
+                            <div className="mt-3 rounded-lg bg-background px-2 py-2.5 md:px-3 md:py-3">
                               <CardElement options={{ hidePostalCode: true }} />
                             </div>
                             <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
@@ -944,7 +944,7 @@ const CheckoutPage = () => {
                            <StripeElementsBridge onChange={handleWooPaymentsContextChange} />
                            <div className={paymentPanelClassName}>
                              <Label className="cursor-default">Card details</Label>
-                             <div className="mt-3 rounded-lg bg-background px-3 py-3">
+                             <div className="mt-3 rounded-lg bg-background px-2 py-2.5 md:px-3 md:py-3">
                                <PaymentElement />
                              </div>
                              <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
