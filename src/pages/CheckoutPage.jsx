@@ -205,19 +205,34 @@ const CheckoutPage = () => {
         });
         storeSession = updated?.store || storeSession;
 
-        // 4) Create Stripe Source and submit Store API checkout using the Stripe gateway.
-        const { error: sourceError, source } = await stripe.createSource(cardElement);
-        if (sourceError) {
-          throw new Error(sourceError.message || 'Card details are invalid');
+        // 4) Create a Stripe PaymentMethod (Stripe.js v3+; createSource is not supported in newer Stripe.js builds).
+        const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+          billing_details: {
+            name: `${formData.firstName} ${formData.lastName}`.trim(),
+            email: formData.email,
+            phone: formData.phone || undefined,
+            address: {
+              line1: formData.address,
+              city: formData.city,
+              state: formData.state,
+              postal_code: formData.zip,
+              country: formData.country,
+            },
+          },
+        });
+        if (paymentMethodError) {
+          throw new Error(paymentMethodError.message || 'Card details are invalid');
         }
-        if (!source?.id) {
-          throw new Error('Payment configuration error. Missing Stripe source.');
+        if (!paymentMethod?.id) {
+          throw new Error('Payment configuration error. Missing Stripe payment method.');
         }
 
         paymentMethodGateway = 'stripe';
         paymentData = {
           provider: 'stripe',
-          stripeSourceId: source.id,
+          stripePaymentMethodId: paymentMethod.id,
         };
 
         const checkoutRes = await storeFetch('/checkout', {
@@ -228,13 +243,12 @@ const CheckoutPage = () => {
             shipping_address,
             payment_method: 'stripe',
             payment_data: [
-              { key: 'stripe_source', value: source.id },
               { key: 'billing_email', value: formData.email },
               { key: 'billing_first_name', value: formData.firstName },
               { key: 'billing_last_name', value: formData.lastName },
-              { key: 'paymentMethod', value: 'stripe' },
-              { key: 'paymentRequestType', value: 'cc' },
-              { key: 'wc-stripe-new-payment-method', value: true },
+              { key: 'payment_method', value: 'stripe' },
+              { key: 'wc-stripe-payment-method', value: paymentMethod.id },
+              { key: 'wc-stripe-is-deferred-intent', value: true },
             ],
           },
         });
