@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, Link } from 'react-router-dom';
-import { Star, Minus, Plus, ShoppingCart, ChevronLeft } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
@@ -38,6 +37,10 @@ const COLOR_SWATCH_MAP = {
   burgundy: '#7f1d1d',
   'forest-green': '#166534',
   'earth-brown': '#8b5e3c',
+};
+const ATTRIBUTE_KIND_ALIASES = {
+  size: new Set(['size', 'sizes', 'pa-size', 'pa_size']),
+  color: new Set(['color', 'colors', 'colour', 'colours', 'pa-color', 'pa-colour', 'pa_color', 'pa_colour']),
 };
 
 const normalizeOptionValue = (value) => String(value || '')
@@ -78,6 +81,33 @@ const uniqueLabels = (values) => {
   }
 
   return output;
+};
+
+const uniqueValues = (values) => {
+  const seen = new Set();
+  const output = [];
+
+  for (const value of values) {
+    const text = String(value || '').trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    output.push(text);
+  }
+
+  return output;
+};
+
+const getAttributeKind = (...values) => {
+  for (const value of values) {
+    const normalized = normalizeOptionValue(value);
+    if (!normalized) continue;
+
+    for (const [kind, aliases] of Object.entries(ATTRIBUTE_KIND_ALIASES)) {
+      if (aliases.has(normalized)) return kind;
+    }
+  }
+
+  return null;
 };
 
 const extractTextFromHtml = (value) => {
@@ -168,72 +198,155 @@ const normalizeImages = (imagesValue, fallbackImage) => {
   if (Array.isArray(imagesValue)) {
     return imagesValue.map(getImageUrl).filter(Boolean);
   }
+
   const one = getImageUrl(fallbackImage);
   return one ? [one] : [];
 };
 
-const isSizeAttribute = (name) => normalizeOptionValue(name) === 'size';
-const isColorAttribute = (name) => ['color', 'colour'].includes(normalizeOptionValue(name));
+const resolveBaseProductInStock = (product) => {
+  if (typeof product?.inStock === 'boolean') return product.inStock;
 
-const extractAttributeOptions = (product, matcher) => {
-  const attributes = Array.isArray(product?.attributes) ? product.attributes : [];
-  const collected = [];
-
-  for (const attribute of attributes) {
-    const attributeName = attribute?.name || attribute?.slug || attribute?.attribute || '';
-    if (!matcher(attributeName)) continue;
-
-    if (Array.isArray(attribute?.options)) {
-      collected.push(...attribute.options);
-    }
-
-    if (Array.isArray(attribute?.terms)) {
-      collected.push(...attribute.terms.map((term) => term?.name || term?.slug || term));
-    }
-  }
-
-  return uniqueLabels(collected);
-};
-
-const resolveVariationInStock = (variation, productInStock) => {
-  if (!productInStock) return false;
-  if (variation?.stock_status) return variation.stock_status !== 'outofstock';
-  if (typeof variation?.inStock === 'boolean') return variation.inStock;
-  if (typeof variation?.is_in_stock === 'boolean') return variation.is_in_stock;
-
-  const stockQuantity = Number(variation?.stock_quantity ?? variation?.stockQuantity);
+  const stockQuantity = Number(product?.stockQuantity);
   if (Number.isFinite(stockQuantity)) return stockQuantity > 0;
 
   return true;
 };
 
-const getVariationEntries = (product, productInStock) => {
+const resolveVariationInStock = (variation) => {
+  const stockStatus = variation?.stockStatus || variation?.stock_status;
+  if (stockStatus) return stockStatus === 'instock';
+  if (typeof variation?.inStock === 'boolean') return variation.inStock;
+  if (typeof variation?.is_in_stock === 'boolean') return variation.is_in_stock;
+
+  const stockQuantity = Number(variation?.stockQuantity ?? variation?.stock_quantity);
+  if (Number.isFinite(stockQuantity)) return stockQuantity > 0;
+
+  return true;
+};
+
+const getRawVariationSelections = (variation) => {
+  if (Array.isArray(variation?.attributeSelections) && variation.attributeSelections.length > 0) {
+    return variation.attributeSelections;
+  }
+
+  if (Array.isArray(variation?.attributes)) {
+    return variation.attributes;
+  }
+
+  if (variation?.attributes && typeof variation.attributes === 'object') {
+    return Object.entries(variation.attributes).map(([name, option]) => ({ name, option }));
+  }
+
+  return [];
+};
+
+const buildVariationEntries = (product) => {
   const variations = Array.isArray(product?.variations) ? product.variations : [];
 
   return variations.map((variation) => {
-    const mappedAttributes = {};
-    const rawAttributes = variation?.attributes;
+    const attributeSelections = [];
+    const attributesByKind = {};
 
-    if (Array.isArray(rawAttributes)) {
-      for (const attribute of rawAttributes) {
-        const attributeName = attribute?.name || attribute?.slug || attribute?.attribute || attribute?.key || '';
-        const optionValue = attribute?.option || attribute?.value || attribute?.name_value || attribute?.option_name || '';
-        const normalizedName = normalizeOptionValue(attributeName);
-        if (!normalizedName || !optionValue) continue;
-        mappedAttributes[normalizedName] = formatOptionLabel(optionValue);
-      }
-    } else if (rawAttributes && typeof rawAttributes === 'object') {
-      for (const [attributeName, optionValue] of Object.entries(rawAttributes)) {
-        if (!optionValue) continue;
-        mappedAttributes[normalizeOptionValue(attributeName)] = formatOptionLabel(optionValue);
-      }
+    for (const selection of getRawVariationSelections(variation)) {
+      const attributeName = selection?.name || selection?.slug || selection?.attribute || selection?.key || '';
+      const attributeSlug = selection?.slug || selection?.name || selection?.attribute || '';
+      const optionValue = selection?.option || selection?.value || selection?.name_value || selection?.option_name || '';
+      const label = formatOptionLabel(optionValue);
+      const kind = getAttributeKind(attributeSlug, attributeName);
+
+      if (!kind || !label) continue;
+
+      const normalizedOption = normalizeOptionValue(label);
+      attributesByKind[kind] = {
+        label,
+        normalized: normalizedOption,
+      };
+      attributeSelections.push({
+        kind,
+        name: selection?.name || (kind === 'color' ? 'Color' : 'Size'),
+        slug: selection?.slug || attributeSlug || attributeName,
+        option: label,
+        normalizedOption,
+      });
     }
 
+    const stockQuantityValue = Number(variation?.stockQuantity ?? variation?.stock_quantity);
+
     return {
-      attributes: mappedAttributes,
-      inStock: resolveVariationInStock(variation, productInStock),
+      id: variation?.id,
+      sku: variation?.sku || '',
+      price: variation?.price ?? '',
+      regularPrice: variation?.regularPrice ?? variation?.regular_price ?? '',
+      salePrice: variation?.salePrice ?? variation?.sale_price ?? '',
+      stockStatus: variation?.stockStatus || variation?.stock_status || (resolveVariationInStock(variation) ? 'instock' : 'outofstock'),
+      stockQuantity: Number.isFinite(stockQuantityValue) ? stockQuantityValue : null,
+      image: getImageUrl(variation?.image),
+      inStock: resolveVariationInStock(variation),
+      attributeSelections,
+      attributesByKind,
     };
-  }).filter((variation) => Object.keys(variation.attributes).length > 0);
+  }).filter((variation) => Object.keys(variation.attributesByKind).length > 0);
+};
+
+const buildAttributeGroups = (product, variationEntries) => {
+  const groups = new Map();
+
+  const ensureGroup = (kind, defaults = {}) => {
+    if (!groups.has(kind)) {
+      groups.set(kind, {
+        kind,
+        name: defaults.name || (kind === 'color' ? 'Color' : 'Size'),
+        slug: defaults.slug || '',
+        options: [],
+      });
+    }
+
+    const group = groups.get(kind);
+    if (!group.name && defaults.name) group.name = defaults.name;
+    if (!group.slug && defaults.slug) group.slug = defaults.slug;
+    return group;
+  };
+
+  const pushOptions = (group, values) => {
+    const nextLabels = uniqueLabels(values);
+    const seen = new Set(group.options.map((option) => normalizeOptionValue(option)));
+
+    for (const option of nextLabels) {
+      const normalized = normalizeOptionValue(option);
+      if (!normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      group.options.push(option);
+    }
+  };
+
+  const productAttributes = Array.isArray(product?.attributes) ? product.attributes : [];
+
+  for (const attribute of productAttributes) {
+    const kind = getAttributeKind(attribute?.slug, attribute?.name, attribute?.attribute);
+    if (!kind) continue;
+
+    const group = ensureGroup(kind, {
+      name: attribute?.name || (kind === 'color' ? 'Color' : 'Size'),
+      slug: attribute?.slug || '',
+    });
+
+    pushOptions(group, Array.isArray(attribute?.options) ? attribute.options : []);
+  }
+
+  for (const variation of variationEntries) {
+    for (const selection of variation.attributeSelections) {
+      const group = ensureGroup(selection.kind, {
+        name: selection.name,
+        slug: selection.slug,
+      });
+
+      pushOptions(group, [selection.option]);
+    }
+  }
+
+  return ['size', 'color']
+    .map((kind) => groups.get(kind))
+    .filter((group) => group && group.options.length > 0);
 };
 
 const getColorSwatchStyle = (colorLabel) => {
@@ -246,7 +359,7 @@ const getColorSwatchStyle = (colorLabel) => {
   }
 
   return {
-    backgroundImage: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 45%, #cbd5e1 45%, #cbd5e1 55%, #94a3b8 55%, #64748b 100%)'
+    backgroundImage: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 45%, #cbd5e1 45%, #cbd5e1 55%, #94a3b8 55%, #64748b 100%)',
   };
 };
 
@@ -261,11 +374,6 @@ const ProductDetailPage = () => {
   const [selectedColor, setSelectedColor] = useState('');
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
-
-  const toNumber = (value, fallback) => {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : fallback;
-  };
 
   const formatPrice = (value) => {
     const n = Number(value);
@@ -349,66 +457,90 @@ const ProductDetailPage = () => {
     }
   };
 
-  const productInStock = (() => {
-    const stockQuantity = Number(product?.stockQuantity);
-    return Number.isFinite(stockQuantity) ? stockQuantity > 0 : true;
-  })();
+  const variationEntries = buildVariationEntries(product);
+  const attributeGroups = buildAttributeGroups(product, variationEntries);
+  const requiredAttributeKinds = attributeGroups.map((attribute) => attribute.kind);
+  const hasRealVariationData = variationEntries.length > 0 && requiredAttributeKinds.length > 0;
+  const baseProductInStock = resolveBaseProductInStock(product);
+  const productInStock = variationEntries.length > 0
+    ? variationEntries.some((variation) => variation.inStock)
+    : baseProductInStock;
 
-  const images = normalizeImages(product?.images, product?.image);
-  const averageRating = toNumber(product?.rating, 4.5);
-  const descriptionSource = product?.description || FALLBACK_DESCRIPTION;
-  const descriptionText = extractTextFromHtml(descriptionSource) || FALLBACK_DESCRIPTION;
-  const sanitizedDescriptionHtml = sanitizeDescriptionHtml(descriptionSource) || `<p>${FALLBACK_DESCRIPTION}</p>`;
-  const hasLongDescription = descriptionText.length > DESCRIPTION_PREVIEW_LENGTH;
-  const collapsedDescription = hasLongDescription
-    ? `${descriptionText.slice(0, DESCRIPTION_PREVIEW_LENGTH).trimEnd()}...`
-    : descriptionText;
-
-  const variationEntries = getVariationEntries(product, productInStock);
-  const rawSizeLabels = extractAttributeOptions(product, isSizeAttribute);
-  const rawColorLabels = extractAttributeOptions(product, isColorAttribute);
-  const variationSizeLabels = uniqueLabels(variationEntries.map((variation) => variation.attributes.size));
-  const variationColorLabels = uniqueLabels(variationEntries.map((variation) => variation.attributes.color || variation.attributes.colour));
-  const hasRealVariationData = variationEntries.length > 0;
-  const sizeLabels = rawSizeLabels.length > 0 ? rawSizeLabels : variationSizeLabels;
-  const colorLabels = rawColorLabels.length > 0 ? rawColorLabels : variationColorLabels;
-
-  const buildVariantOption = (kind, label) => {
-    const normalizedLabel = normalizeOptionValue(label);
-    if (!productInStock) {
-      return { label, disabled: true };
-    }
-
-    if (variationEntries.length === 0) {
-      return { label, disabled: false };
-    }
-
-    const matches = variationEntries.some((variation) => {
-      if (!variation.inStock) return false;
-
-      const optionValue = kind === 'size'
-        ? variation.attributes.size
-        : (variation.attributes.color || variation.attributes.colour);
-
-      if (normalizeOptionValue(optionValue) !== normalizedLabel) return false;
-
-      if (kind === 'size' && selectedColor) {
-        const relatedColor = variation.attributes.color || variation.attributes.colour;
-        return normalizeOptionValue(relatedColor) === normalizeOptionValue(selectedColor);
-      }
-
-      if (kind === 'color' && selectedSize) {
-        return normalizeOptionValue(variation.attributes.size) === normalizeOptionValue(selectedSize);
-      }
-
-      return true;
-    });
-
-    return { label, disabled: !matches };
+  const selectedValues = {
+    size: normalizeOptionValue(selectedSize),
+    color: normalizeOptionValue(selectedColor),
   };
 
-  const sizeOptions = hasRealVariationData ? sizeLabels.map((label) => buildVariantOption('size', label)) : [];
-  const colorOptions = hasRealVariationData ? colorLabels.map((label) => buildVariantOption('color', label)) : [];
+  const matchesSelectedAttributes = (variation, override = {}) => {
+    for (const kind of requiredAttributeKinds) {
+      const expected = override[kind] ?? selectedValues[kind];
+      if (!expected) continue;
+
+      const variationValue = variation.attributesByKind[kind]?.normalized;
+      if (variationValue !== expected) return false;
+    }
+
+    return true;
+  };
+
+  const fullySelected = requiredAttributeKinds.every((kind) => selectedValues[kind]);
+  const selectedVariation = fullySelected
+    ? variationEntries.find((variation) => variation.inStock && matchesSelectedAttributes(variation))
+      || variationEntries.find((variation) => matchesSelectedAttributes(variation))
+      || null
+    : null;
+
+  const getPreferredVariationImage = () => {
+    if (selectedVariation?.image) return selectedVariation.image;
+    if (!selectedValues.color) return null;
+
+    const exactColorMatch = variationEntries.find((variation) => (
+      variation.inStock
+      && variation.image
+      && variation.attributesByKind.color?.normalized === selectedValues.color
+      && (!selectedValues.size || variation.attributesByKind.size?.normalized === selectedValues.size)
+    ));
+
+    if (exactColorMatch?.image) return exactColorMatch.image;
+
+    const colorMatch = variationEntries.find((variation) => (
+      variation.image && variation.attributesByKind.color?.normalized === selectedValues.color
+    ));
+
+    return colorMatch?.image || null;
+  };
+
+  const preferredVariationImage = getPreferredVariationImage();
+  const baseImages = normalizeImages(product?.images, product?.image);
+  const images = uniqueValues([preferredVariationImage, ...baseImages]).filter(Boolean);
+
+  useEffect(() => {
+    setSelectedImage(0);
+  }, [preferredVariationImage, product?.id]);
+
+  useEffect(() => {
+    if (selectedImage >= images.length) {
+      setSelectedImage(0);
+    }
+  }, [images.length, selectedImage]);
+
+  const findOptionState = (kind, label) => {
+    const target = normalizeOptionValue(label);
+
+    const available = variationEntries.some((variation) => (
+      variation.inStock && matchesSelectedAttributes(variation, { [kind]: target })
+    ));
+
+    return {
+      label,
+      disabled: !available,
+    };
+  };
+
+  const sizeGroup = attributeGroups.find((attribute) => attribute.kind === 'size');
+  const colorGroup = attributeGroups.find((attribute) => attribute.kind === 'color');
+  const sizeOptions = sizeGroup ? sizeGroup.options.map((label) => findOptionState('size', label)) : [];
+  const colorOptions = colorGroup ? colorGroup.options.map((label) => findOptionState('color', label)) : [];
 
   const selectedSizeDisabled = selectedSize
     ? !sizeOptions.some((option) => option.label === selectedSize && !option.disabled)
@@ -426,16 +558,41 @@ const ProductDetailPage = () => {
     if (selectedColorDisabled) setSelectedColor('');
   }, [selectedColorDisabled]);
 
-  const missingSelections = [];
-  if (sizeOptions.length > 0 && !selectedSize) missingSelections.push('size');
-  if (colorOptions.length > 0 && !selectedColor) missingSelections.push('color');
+  const displayPrice = selectedVariation?.price || product?.price;
+  const displayRegularPrice = selectedVariation?.regularPrice || product?.regularPrice;
+  const displaySalePrice = selectedVariation?.salePrice || product?.salePrice;
+  const hasSalePrice = Number(displaySalePrice) > 0 && Number(displayRegularPrice || displayPrice) > Number(displayPrice);
+  const stockQuantityValue = Number(selectedVariation?.stockQuantity ?? product?.stockQuantity);
+  const stockQuantity = Number.isFinite(stockQuantityValue) ? stockQuantityValue : null;
+  const maxQuantity = stockQuantity && stockQuantity > 0 ? Math.min(stockQuantity, 99) : 99;
 
+  useEffect(() => {
+    setQuantity((currentQuantity) => Math.min(Math.max(1, currentQuantity), maxQuantity));
+  }, [maxQuantity]);
+
+  const missingSelections = requiredAttributeKinds.filter((kind) => !selectedValues[kind]);
+  const missingSelectionLabel = missingSelections.join(' and ');
   const canClearSelections = hasRealVariationData && Boolean(selectedSize || selectedColor);
-  const canAddToCart = productInStock && missingSelections.length === 0 && !selectedSizeDisabled && !selectedColorDisabled;
+  const canAddToCart = hasRealVariationData
+    ? Boolean(selectedVariation?.id) && selectedVariation.inStock && missingSelections.length === 0
+    : productInStock;
+
+  const availabilityText = (() => {
+    if (!productInStock) return 'Out of stock';
+    if (hasRealVariationData && missingSelections.length > 0) return `Select ${missingSelectionLabel}`;
+    if (selectedVariation && !selectedVariation.inStock) return 'Selected combination is unavailable';
+    if (selectedVariation && Number.isFinite(stockQuantity) && stockQuantity > 0) {
+      return stockQuantity <= 5 ? `Only ${stockQuantity} left` : `${stockQuantity} in stock`;
+    }
+    if (selectedVariation?.inStock) return 'In stock';
+    if (hasRealVariationData) return `${variationEntries.filter((variation) => variation.inStock).length} available combinations`;
+    return 'In stock';
+  })();
+
   const addToCartLabel = !productInStock
     ? 'Out of stock'
-    : missingSelections.length > 0
-      ? `Select ${missingSelections.join(' and ')}`
+    : hasRealVariationData && missingSelections.length > 0
+      ? `Select ${missingSelectionLabel}`
       : 'Add to cart';
 
   const handleClearSelections = () => {
@@ -450,22 +607,35 @@ const ProductDetailPage = () => {
     }
 
     const cart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0,"itemCount":0}');
+    const cartLineKey = selectedVariation?.id ? `variation-${selectedVariation.id}` : `product-${product.id}`;
+    const itemPrice = parseFloat(displayPrice);
+    const itemImage = images[selectedImage] || images[0] || 'https://images.unsplash.com/photo-1618815909724-861120595390';
 
-    const existingItemIndex = cart.items.findIndex(
-      (item) => item.productId === product.id && item.size === selectedSize && item.color === selectedColor
-    );
+    const existingItemIndex = cart.items.findIndex((item) => {
+      const existingKey = item.variationId ? `variation-${item.variationId}` : `product-${item.productId}`;
+      return existingKey === cartLineKey;
+    });
 
     if (existingItemIndex > -1) {
-      cart.items[existingItemIndex].quantity += quantity;
+      const existingQuantity = Number(cart.items[existingItemIndex].quantity) || 0;
+      const nextQuantity = Math.min(existingQuantity + quantity, maxQuantity);
+      cart.items[existingItemIndex] = {
+        ...cart.items[existingItemIndex],
+        quantity: nextQuantity,
+        price: itemPrice,
+        image: itemImage,
+      };
     } else {
       cart.items.push({
         productId: product.id,
+        variationId: selectedVariation?.id || null,
+        sku: selectedVariation?.sku || product?.sku || '',
         name: product.name,
-        price: parseFloat(product.price),
-        image: product.images?.[0] || product.image,
+        price: itemPrice,
+        image: itemImage,
         quantity,
         size: selectedSize,
-        color: selectedColor
+        color: selectedColor,
       });
     }
 
@@ -478,12 +648,20 @@ const ProductDetailPage = () => {
     setCartDrawerOpen(true);
   };
 
+  const descriptionSource = product?.description || FALLBACK_DESCRIPTION;
+  const descriptionText = extractTextFromHtml(descriptionSource) || FALLBACK_DESCRIPTION;
+  const sanitizedDescriptionHtml = sanitizeDescriptionHtml(descriptionSource) || `<p>${FALLBACK_DESCRIPTION}</p>`;
+  const hasLongDescription = descriptionText.length > DESCRIPTION_PREVIEW_LENGTH;
+  const collapsedDescription = hasLongDescription
+    ? `${descriptionText.slice(0, DESCRIPTION_PREVIEW_LENGTH).trimEnd()}...`
+    : descriptionText;
+
   if (loading) {
     return (
       <>
         <Header onCartClick={() => setCartDrawerOpen(true)} />
         <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
-        <main className="py-12 pb-28 md:pb-12">
+        <main className="py-12 pb-20">
           <div className="container-custom">
             <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.45fr)]">
               <div className="space-y-4">
@@ -510,7 +688,7 @@ const ProductDetailPage = () => {
       <>
         <Header onCartClick={() => setCartDrawerOpen(true)} />
         <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
-        <main className="py-20 pb-28 md:pb-20">
+        <main className="py-20">
           <div className="container-custom text-center">
             <h1 className="mb-4 text-2xl font-bold">Product not found</h1>
             <Link to="/shop">
@@ -536,7 +714,7 @@ const ProductDetailPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-12 pb-28 md:pb-12">
+      <main className="py-12 pb-20">
         <div className="container-custom">
           <Link
             to="/shop"
@@ -546,8 +724,32 @@ const ProductDetailPage = () => {
             Back to shop
           </Link>
 
-          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.55fr)] lg:items-start lg:gap-16">
-            <div className="mx-auto w-full max-w-[30rem] lg:max-w-[24rem] xl:max-w-[26rem]">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.55fr)] lg:items-start lg:gap-16">
+            <section className="order-1 min-w-0 md:order-2 lg:pr-4">
+              <h1
+                className="text-3xl font-bold text-balance md:text-4xl"
+                style={{ letterSpacing: '-0.02em' }}
+              >
+                {product.name}
+              </h1>
+
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <p className="text-3xl font-bold font-variant-tabular">
+                  ${formatPrice(displayPrice)}
+                </p>
+                {hasSalePrice && (
+                  <p className="text-lg font-medium text-muted-foreground line-through font-variant-tabular">
+                    ${formatPrice(displayRegularPrice)}
+                  </p>
+                )}
+              </div>
+
+              <p className="mt-3 text-sm font-medium text-muted-foreground">
+                {availabilityText}
+              </p>
+            </section>
+
+            <section className="order-2 mx-auto w-full max-w-[30rem] md:order-1 lg:max-w-[24rem] xl:max-w-[26rem]">
               <div className="mb-3 aspect-[4/5] max-h-[32rem] overflow-hidden rounded-xl bg-muted sm:aspect-square md:aspect-[4/5]">
                 <img
                   src={images[selectedImage] || 'https://images.unsplash.com/photo-1618815909724-861120595390'}
@@ -560,7 +762,8 @@ const ProductDetailPage = () => {
                 <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-4">
                   {images.map((img, index) => (
                     <button
-                      key={index}
+                      key={`${img}-${index}`}
+                      type="button"
                       onClick={() => setSelectedImage(index)}
                       className={`aspect-square overflow-hidden rounded-lg border-2 bg-muted transition-all duration-200 ${
                         selectedImage === index ? 'border-primary' : 'border-transparent hover:border-border'
@@ -571,66 +774,10 @@ const ProductDetailPage = () => {
                   ))}
                 </div>
               )}
-            </div>
+            </section>
 
-            <div className="min-w-0 lg:pr-4">
-              <h1
-                className="mb-3 text-3xl font-bold text-balance md:text-4xl"
-                style={{ letterSpacing: '-0.02em' }}
-              >
-                {product.name}
-              </h1>
-
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-4 w-4 ${i < Math.floor(averageRating) ? 'fill-primary text-primary' : 'text-muted'}`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {averageRating.toFixed(1)} ({product.reviews?.length || 0} reviews)
-                </span>
-              </div>
-
-              <p className="mb-6 text-3xl font-bold font-variant-tabular">${formatPrice(product.price)}</p>
-
-              <div className="mb-6 max-w-prose">
-                {descriptionExpanded ? (
-                  <div
-                    className="space-y-4 leading-relaxed text-muted-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
-                    dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
-                  />
-                ) : (
-                  <p
-                    className="leading-relaxed text-muted-foreground"
-                    style={{
-                      display: '-webkit-box',
-                      WebkitBoxOrient: 'vertical',
-                      WebkitLineClamp: 3,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {collapsedDescription}
-                  </p>
-                )}
-
-                {hasLongDescription && (
-                  <button
-                    type="button"
-                    onClick={() => setDescriptionExpanded((current) => !current)}
-                    className="mt-3 text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80"
-                  >
-                    {descriptionExpanded ? 'Read less' : 'Read more'}
-                  </button>
-                )}
-              </div>
-
-              <Separator className="my-6" />
-
-              <div className="mb-6 rounded-2xl border border-border/70 bg-background/95 p-5 shadow-sm backdrop-blur lg:sticky lg:top-24">
+            <section className="order-3 min-w-0 md:order-3 lg:pr-4">
+              <div className="rounded-2xl border border-border/70 bg-background/95 p-5 shadow-sm backdrop-blur lg:sticky lg:top-24">
                 {hasRealVariationData && (
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
@@ -665,7 +812,7 @@ const ProductDetailPage = () => {
                               aria-pressed={isSelected}
                               className={`min-w-[3.25rem] rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-200 ${
                                 option.disabled
-                                  ? 'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground line-through opacity-50'
+                                  ? 'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground opacity-50'
                                   : isSelected
                                     ? 'border-primary bg-primary/10 text-primary shadow-sm'
                                     : 'border-border bg-background hover:border-primary/50 hover:bg-primary/5'
@@ -705,7 +852,7 @@ const ProductDetailPage = () => {
                                 className={`h-5 w-5 shrink-0 rounded-full border border-black/10 ${option.disabled ? 'opacity-70' : ''}`}
                                 style={getColorSwatchStyle(option.label)}
                               />
-                              <span className={`truncate font-medium ${option.disabled ? 'line-through' : ''}`}>
+                              <span className="truncate font-medium">
                                 {option.label}
                               </span>
                             </button>
@@ -729,7 +876,8 @@ const ProductDetailPage = () => {
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => setQuantity((currentQuantity) => Math.min(99, currentQuantity + 1))}
+                        disabled={quantity >= maxQuantity}
+                        onClick={() => setQuantity((currentQuantity) => Math.min(maxQuantity, currentQuantity + 1))}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -737,7 +885,7 @@ const ProductDetailPage = () => {
                   </div>
                 </div>
 
-                <Button onClick={addToCart} size="lg" className="mt-5 hidden w-full md:flex" disabled={!canAddToCart}>
+                <Button onClick={addToCart} size="lg" className="mt-5 w-full" disabled={!canAddToCart}>
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   {addToCartLabel}
                 </Button>
@@ -751,33 +899,41 @@ const ProductDetailPage = () => {
                   </ul>
                 </div>
               </div>
-            </div>
-          </div>
+            </section>
 
-          {product.reviews && product.reviews.length > 0 && (
-            <section className="mt-20">
-              <h2 className="mb-6 text-2xl font-bold">Customer reviews</h2>
-              <div className="space-y-6">
-                {product.reviews.map((review, index) => (
-                  <div key={index} className="rounded-lg border border-border p-6">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${i < review.rating ? 'fill-primary text-primary' : 'text-muted'}`}
-                          />
-                        ))}
-                      </div>
-                      <span className="font-semibold">{review.reviewer}</span>
-                      <span className="text-sm text-muted-foreground">{review.date}</span>
-                    </div>
-                    <p className="leading-relaxed text-muted-foreground">{review.review}</p>
-                  </div>
-                ))}
+            <section className="order-4 min-w-0 md:order-4 lg:pr-4">
+              <div className="max-w-prose">
+                {descriptionExpanded ? (
+                  <div
+                    className="space-y-4 leading-relaxed text-muted-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
+                    dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
+                  />
+                ) : (
+                  <p
+                    className="leading-relaxed text-muted-foreground"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: 3,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {collapsedDescription}
+                  </p>
+                )}
+
+                {hasLongDescription && (
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionExpanded((current) => !current)}
+                    className="mt-3 text-sm font-semibold text-primary transition-colors duration-200 hover:text-primary/80"
+                  >
+                    {descriptionExpanded ? 'Read less' : 'Read more'}
+                  </button>
+                )}
               </div>
             </section>
-          )}
+          </div>
 
           {relatedProducts.length > 0 && (
             <section className="mt-20">
@@ -803,19 +959,6 @@ const ProductDetailPage = () => {
           )}
         </div>
       </main>
-
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
-        <div className="container-custom flex items-center gap-3 py-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Ready to order</p>
-            <p className="truncate text-lg font-semibold font-variant-tabular">${formatPrice(product.price)}</p>
-          </div>
-          <Button onClick={addToCart} size="lg" className="shrink-0 px-5" disabled={!canAddToCart}>
-            <ShoppingCart className="mr-2 h-5 w-5" />
-            {canAddToCart ? 'Add to cart' : 'Select options'}
-          </Button>
-        </div>
-      </div>
 
       <Footer />
     </>

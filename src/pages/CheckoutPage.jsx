@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Truck, MapPin } from 'lucide-react';
-import { CardElement, Elements, ElementsConsumer, PaymentElement } from '@stripe/react-stripe-js';
+import { CardElement, Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,9 +64,23 @@ const extractCheckoutErrorMessage = (checkoutData, fallback = 'Payment failed') 
 };
 
 const sectionCardClassName = 'bg-card border border-border/60 rounded-2xl p-5 md:p-6';
-const actionRowClassName = 'mt-5 flex flex-col-reverse gap-3 sm:flex-row';
 const optionListClassName = 'mt-1 overflow-hidden rounded-xl border border-border/60 bg-background/40';
 const paymentPanelClassName = 'mt-5 rounded-xl bg-muted/30 p-4 md:p-5';
+
+const StripeElementsBridge = ({ onChange }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  useEffect(() => {
+    onChange({ stripe, elements });
+
+    return () => {
+      onChange({ stripe: null, elements: null });
+    };
+  }, [elements, onChange, stripe]);
+
+  return null;
+};
 
 const normalizePaymentMethods = (methods) => {
   if (!Array.isArray(methods)) return [];
@@ -88,13 +102,14 @@ const normalizePaymentMethods = (methods) => {
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const [cart, setCart] = useState({ items: [], subtotal: 0 });
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState(['stripe']);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
   const [wooPaymentsConfig, setWooPaymentsConfig] = useState(null);
   const [wooPaymentsConfigError, setWooPaymentsConfigError] = useState('');
+  const [stripeCheckoutContext, setStripeCheckoutContext] = useState({ stripe: null, elements: null });
+  const [wooPaymentsCheckoutContext, setWooPaymentsCheckoutContext] = useState({ stripe: null, elements: null });
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -263,6 +278,28 @@ const CheckoutPage = () => {
     return loadStripe(publishableKey, Object.keys(stripeOptions).length > 0 ? stripeOptions : undefined);
   }, [wooPaymentsConfig]);
 
+  const handleStripeContextChange = useCallback((nextContext) => {
+    setStripeCheckoutContext((prev) => (
+      prev.stripe === nextContext?.stripe && prev.elements === nextContext?.elements
+        ? prev
+        : {
+          stripe: nextContext?.stripe || null,
+          elements: nextContext?.elements || null,
+        }
+    ));
+  }, []);
+
+  const handleWooPaymentsContextChange = useCallback((nextContext) => {
+    setWooPaymentsCheckoutContext((prev) => (
+      prev.stripe === nextContext?.stripe && prev.elements === nextContext?.elements
+        ? prev
+        : {
+          stripe: nextContext?.stripe || null,
+          elements: nextContext?.elements || null,
+        }
+    ));
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -271,7 +308,7 @@ const CheckoutPage = () => {
     }
   };
 
-  const validateStep1 = () => {
+  const validateCheckoutForm = () => {
     const newErrors = {};
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
@@ -285,15 +322,12 @@ const CheckoutPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNextStep = () => {
-    if (step === 1 && !validateStep1()) {
+  const handlePlaceOrder = async ({ stripe, elements } = {}) => {
+    if (!validateCheckoutForm()) {
       toast.error('Please fill in all required fields');
       return;
     }
-    setStep(step + 1);
-  };
 
-  const handlePlaceOrder = async ({ stripe, elements } = {}) => {
     setLoading(true);
     try {
       let paymentData = null;
@@ -622,6 +656,27 @@ const CheckoutPage = () => {
     };
   }, [total, wooPaymentsConfig]);
 
+  const currentPaymentContext = formData.paymentMethod === 'woocommerce_payments'
+    ? wooPaymentsCheckoutContext
+    : stripeCheckoutContext;
+
+  const placeOrderDisabled = loading
+    || paymentMethodsLoading
+    || cart.items.length === 0
+    || (formData.paymentMethod === 'stripe' && (!stripePublishableKey || !currentPaymentContext?.stripe || !currentPaymentContext?.elements))
+    || (formData.paymentMethod === 'woocommerce_payments' && (
+      !!wooPaymentsConfigError
+      || !wooPaymentsStripePromise
+      || !wooPaymentsElementsOptions
+      || !currentPaymentContext?.stripe
+      || !currentPaymentContext?.elements
+    ));
+
+  const handleCheckoutSubmit = () => handlePlaceOrder({
+    stripe: currentPaymentContext?.stripe || undefined,
+    elements: currentPaymentContext?.elements || undefined,
+  });
+
   return (
     <>
       <Helmet>
@@ -632,32 +687,26 @@ const CheckoutPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-8 md:py-12">
+      <main className="py-8 pb-28 md:py-12 md:pb-12">
         <div className="container-custom max-w-5xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-8 text-balance" style={{ letterSpacing: '-0.02em' }}>
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 text-balance" style={{ letterSpacing: '-0.02em' }}>
             Checkout
           </h1>
-
-          <div className="flex gap-2 mb-8">
-            {[1, 2, 3].map((s) => (
-              <div
-                key={s}
-                className={`flex-1 h-2 rounded-full transition-all duration-300 ${
-                  s <= step ? 'bg-primary' : 'bg-muted'
-                }`}
-              />
-            ))}
-          </div>
+          <p className="mb-8 max-w-2xl text-sm text-muted-foreground md:text-base">
+            Complete your details, choose a delivery option, and finish payment in one place.
+          </p>
 
           <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
             <div className="lg:col-span-2">
-              {step === 1 && (
-                <div className={sectionCardClassName}>
+              <div className={sectionCardClassName}>
                   <div className="mb-6 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <MapPin className="w-5 h-5 text-primary" />
                     </div>
-                    <h2 className="text-xl font-bold">Shipping information</h2>
+                    <div>
+                      <h2 className="text-xl font-bold">Contact & billing</h2>
+                      <p className="text-sm text-muted-foreground">We’ll use these details for your order and delivery.</p>
+                    </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
@@ -772,19 +821,17 @@ const CheckoutPage = () => {
                     </div>
                   </div>
 
-                  <Button onClick={handleNextStep} size="lg" className="mt-5 w-full">
-                    Continue to shipping
-                  </Button>
                 </div>
-              )}
 
-              {step === 2 && (
-                <div className={sectionCardClassName}>
+              <div className={sectionCardClassName}>
                   <div className="mb-6 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Truck className="w-5 h-5 text-primary" />
                     </div>
-                    <h2 className="text-xl font-bold">Shipping method</h2>
+                    <div>
+                      <h2 className="text-xl font-bold">Shipping method</h2>
+                      <p className="text-sm text-muted-foreground">Choose how quickly you’d like to receive your order.</p>
+                    </div>
                   </div>
 
                   <RadioGroup value={formData.shippingMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, shippingMethod: value }))}>
@@ -813,24 +860,17 @@ const CheckoutPage = () => {
                     </div>
                   </RadioGroup>
 
-                  <div className={actionRowClassName}>
-                    <Button onClick={() => setStep(1)} variant="outline" size="lg" className="flex-1">
-                      Back
-                    </Button>
-                    <Button onClick={handleNextStep} size="lg" className="flex-1">
-                      Continue to payment
-                    </Button>
-                  </div>
                 </div>
-              )}
 
-              {step === 3 && (
-                <div className={sectionCardClassName}>
+              <div className={sectionCardClassName}>
                   <div className="mb-5 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <CreditCard className="w-5 h-5 text-primary" />
                     </div>
-                    <h2 className="text-xl font-bold">Payment method</h2>
+                    <div>
+                      <h2 className="text-xl font-bold">Payment</h2>
+                      <p className="text-sm text-muted-foreground">Choose a payment method and enter the required details.</p>
+                    </div>
                   </div>
 
                    {paymentMethodsLoading ? (
@@ -866,6 +906,7 @@ const CheckoutPage = () => {
                         <Elements
                           stripe={stripePromise}
                         >
+                          <StripeElementsBridge onChange={handleStripeContextChange} />
                           <div className={paymentPanelClassName}>
                             <Label className="cursor-default">Card details</Label>
                             <div className="mt-3 rounded-lg bg-background px-3 py-3">
@@ -873,37 +914,10 @@ const CheckoutPage = () => {
                             </div>
                             <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
                           </div>
-
-                          <ElementsConsumer>
-                            {({ stripe, elements }) => (
-                              <div className={actionRowClassName}>
-                                <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                                  Back
-                                </Button>
-                                <Button
-                                  onClick={() => handlePlaceOrder({ stripe, elements })}
-                                  disabled={loading || !stripe || !elements}
-                                  size="lg"
-                                  className="flex-1"
-                                >
-                                  {loading ? 'Processing...' : 'Place order'}
-                                </Button>
-                              </div>
-                            )}
-                          </ElementsConsumer>
                         </Elements>
                       )}
 
-                      {!stripePromise && (
-                        <div className={actionRowClassName}>
-                          <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                            Back
-                          </Button>
-                          <Button disabled size="lg" className="flex-1">
-                            Place order
-                          </Button>
-                        </div>
-                       )}
+                      {!stripePromise && null}
                      </div>
                    )}
 
@@ -912,20 +926,6 @@ const CheckoutPage = () => {
                        <div className={paymentPanelClassName}>
                          <p className="font-semibold">Cash on delivery</p>
                          <p className="text-sm text-muted-foreground mt-1">Your order will be submitted with WooCommerce Cash on Delivery.</p>
-                       </div>
-
-                       <div className={actionRowClassName}>
-                         <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                           Back
-                         </Button>
-                         <Button
-                           onClick={() => handlePlaceOrder()}
-                           disabled={loading}
-                           size="lg"
-                           className="flex-1"
-                         >
-                           {loading ? 'Processing...' : 'Place order'}
-                         </Button>
                        </div>
                      </div>
                    )}
@@ -941,6 +941,7 @@ const CheckoutPage = () => {
 
                        {!!wooPaymentsStripePromise && !!wooPaymentsElementsOptions && !wooPaymentsConfigError && (
                          <Elements stripe={wooPaymentsStripePromise} options={wooPaymentsElementsOptions}>
+                           <StripeElementsBridge onChange={handleWooPaymentsContextChange} />
                            <div className={paymentPanelClassName}>
                              <Label className="cursor-default">Card details</Label>
                              <div className="mt-3 rounded-lg bg-background px-3 py-3">
@@ -948,59 +949,20 @@ const CheckoutPage = () => {
                              </div>
                              <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
                            </div>
-
-                           <ElementsConsumer>
-                             {({ stripe, elements }) => (
-                               <div className={actionRowClassName}>
-                                 <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                                   Back
-                                 </Button>
-                                 <Button
-                                   onClick={() => handlePlaceOrder({ stripe, elements })}
-                                   disabled={loading || !stripe || !elements}
-                                   size="lg"
-                                   className="flex-1"
-                                 >
-                                   {loading ? 'Processing...' : 'Place order'}
-                                 </Button>
-                               </div>
-                             )}
-                           </ElementsConsumer>
                          </Elements>
                        )}
 
                        {(!wooPaymentsStripePromise || !wooPaymentsElementsOptions) && !wooPaymentsConfigError && (
-                         <>
-                           <div className={paymentPanelClassName}>
-                             <p className="font-semibold">WooPayments</p>
-                             <p className="text-sm text-muted-foreground mt-1">Loading secure WooPayments form...</p>
-                           </div>
-
-                           <div className={actionRowClassName}>
-                             <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                               Back
-                             </Button>
-                             <Button disabled size="lg" className="flex-1">
-                               Place order
-                             </Button>
-                           </div>
-                         </>
-                       )}
-
-                       {!!wooPaymentsConfigError && (
-                         <div className={actionRowClassName}>
-                           <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                             Back
-                           </Button>
-                           <Button disabled size="lg" className="flex-1">
-                             Place order
-                           </Button>
+                         <div className={paymentPanelClassName}>
+                           <p className="font-semibold">WooPayments</p>
+                           <p className="text-sm text-muted-foreground mt-1">Loading secure WooPayments form...</p>
                          </div>
                        )}
+
+                       {!!wooPaymentsConfigError && null}
                      </div>
                    )}
                  </div>
-               )}
             </div>
 
             <div className="lg:col-span-1">
@@ -1055,11 +1017,37 @@ const CheckoutPage = () => {
                   <span className="font-bold text-xl font-variant-tabular">${total.toFixed(2)}</span>
                 </div>
 
-                <div className="text-xs text-muted-foreground">
+                <Button
+                  onClick={handleCheckoutSubmit}
+                  disabled={placeOrderDisabled}
+                  size="lg"
+                  className="hidden w-full md:inline-flex"
+                >
+                  {loading ? 'Processing...' : 'Place order'}
+                </Button>
+
+                <div className="mt-4 text-xs text-muted-foreground">
                   <p>By placing this order, you agree to our Terms of Service and Privacy Policy.</p>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+          <div className="mx-auto flex max-w-5xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
+              <p className="text-lg font-bold font-variant-tabular">${total.toFixed(2)}</p>
+            </div>
+            <Button
+              onClick={handleCheckoutSubmit}
+              disabled={placeOrderDisabled}
+              size="lg"
+              className="min-w-[170px]"
+            >
+              {loading ? 'Processing...' : 'Place order'}
+            </Button>
           </div>
         </div>
       </main>
