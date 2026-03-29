@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Truck, MapPin } from 'lucide-react';
-import { CardElement, Elements, ElementsConsumer } from '@stripe/react-stripe-js';
+import { CardElement, Elements, ElementsConsumer, PaymentElement } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,32 @@ const getPaymentMethodLabel = (method) => PAYMENT_METHOD_META[method]?.label || 
 
 const getPaymentMethodDescription = (method) => PAYMENT_METHOD_META[method]?.description || 'Available payment method';
 
+const toMinorAmount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Math.max(0, Math.round(amount * 100));
+};
+
+const normalizeWooPaymentsLocale = (value) => {
+  const locale = String(value || '').trim();
+  if (!locale) return undefined;
+  return locale.replace('_', '-');
+};
+
+const extractCheckoutErrorMessage = (checkoutData, fallback = 'Payment failed') => {
+  const details = Array.isArray(checkoutData?.payment_result?.payment_details)
+    ? checkoutData.payment_result.payment_details
+    : [];
+  const detailMessage = details.find((entry) => entry?.key === 'message')?.value;
+
+  return (
+    detailMessage ||
+    checkoutData?.payment_result?.error_message ||
+    checkoutData?.message ||
+    fallback
+  );
+};
+
 const normalizePaymentMethods = (methods) => {
   if (!Array.isArray(methods)) return [];
 
@@ -62,6 +88,8 @@ const CheckoutPage = () => {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState(['stripe']);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
+  const [wooPaymentsConfig, setWooPaymentsConfig] = useState(null);
+  const [wooPaymentsConfigError, setWooPaymentsConfigError] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -80,6 +108,7 @@ const CheckoutPage = () => {
   const [errors, setErrors] = useState({});
   const envStripePublishableKey = import.meta?.env?.VITE_STRIPE_PUBLISHABLE_KEY;
   const [stripePublishableKey, setStripePublishableKey] = useState(import.meta.env.DEV ? (envStripePublishableKey || '') : '');
+  const wpBaseUrl = String(import.meta?.env?.VITE_WP_BASE_URL || 'https://wp.anfastyles.shop').replace(/\/+$/, '');
 
   useEffect(() => {
     let cancelled = false;
@@ -146,10 +175,88 @@ const CheckoutPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWooPaymentsConfig = async () => {
+      if (!availablePaymentMethods.includes('woocommerce_payments')) {
+        if (!cancelled) {
+          setWooPaymentsConfig(null);
+          setWooPaymentsConfigError('');
+        }
+        return;
+      }
+
+      const parseConfigResponse = async (response) => {
+        const json = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message =
+            json?.details?.message ||
+            json?.error ||
+            json?.message ||
+            'Failed to load WooPayments checkout config.';
+          throw new Error(message);
+        }
+
+        if (!json?.ok || !json?.isReady || !json?.config?.publishableKey) {
+          throw new Error('WooPayments checkout config is not ready.');
+        }
+
+        return json;
+      };
+
+      try {
+        setWooPaymentsConfigError('');
+
+        let config = null;
+
+        try {
+          const apiResponse = await apiServerClient.fetch('/payments/woopayments/config');
+          config = await parseConfigResponse(apiResponse);
+        } catch (apiError) {
+          const directResponse = await fetch(`${wpBaseUrl}/wp-json/anfastyles/v1/woopayments-config`);
+          config = await parseConfigResponse(directResponse);
+          if (!cancelled) {
+            console.warn('WooPayments config loaded from WordPress bridge fallback:', apiError);
+          }
+        }
+
+        if (!cancelled) {
+          setWooPaymentsConfig(config);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setWooPaymentsConfig(null);
+          setWooPaymentsConfigError(error.message || 'Failed to load WooPayments checkout config.');
+        }
+      }
+    };
+
+    loadWooPaymentsConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [availablePaymentMethods, wpBaseUrl]);
+
   const stripePromise = useMemo(() => {
     if (!stripePublishableKey) return null;
     return loadStripe(String(stripePublishableKey).trim());
   }, [stripePublishableKey]);
+
+  const wooPaymentsStripePromise = useMemo(() => {
+    const publishableKey = String(wooPaymentsConfig?.config?.publishableKey || '').trim();
+    if (!publishableKey) return null;
+
+    const stripeOptions = {};
+    const locale = normalizeWooPaymentsLocale(wooPaymentsConfig?.blocksData?.locale || wooPaymentsConfig?.config?.locale);
+    const accountId = String(wooPaymentsConfig?.config?.accountId || '').trim();
+
+    if (locale) stripeOptions.locale = locale;
+    if (accountId) stripeOptions.stripeAccount = accountId;
+
+    return loadStripe(publishableKey, Object.keys(stripeOptions).length > 0 ? stripeOptions : undefined);
+  }, [wooPaymentsConfig]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -291,8 +398,7 @@ const CheckoutPage = () => {
         const checkoutData = checkoutRes?.data;
         const paymentStatus = checkoutData?.payment_result?.payment_status;
         if (paymentStatus !== 'success') {
-          const msg = checkoutData?.payment_result?.payment_details?.find((d) => d?.key === 'message')?.value;
-          throw new Error(msg || 'Payment failed');
+          throw new Error(extractCheckoutErrorMessage(checkoutData));
         }
 
         localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
@@ -388,7 +494,65 @@ const CheckoutPage = () => {
       }
 
       if (formData.paymentMethod === 'woocommerce_payments') {
-        throw new Error('WooPayments is visible from WooCommerce, but its headless payment details are not wired yet. Please use Stripe or cash on delivery.');
+        if (!stripe || !elements) {
+          throw new Error('WooPayments is still loading. Please wait a moment and try again.');
+        }
+
+        if (!wooPaymentsConfig?.config?.publishableKey) {
+          throw new Error(wooPaymentsConfigError || 'WooPayments is not configured for checkout.');
+        }
+
+        const submitResult = await elements.submit();
+        if (submitResult?.error) {
+          throw new Error(submitResult.error.message || 'Invalid payment details.');
+        }
+
+        const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+          elements,
+          params: {
+            billing_details: {
+              name: `${formData.firstName} ${formData.lastName}`.trim(),
+              email: formData.email,
+              phone: formData.phone || undefined,
+              address: {
+                line1: formData.address,
+                city: formData.city,
+                state: formData.state,
+                postal_code: formData.zip,
+                country: formData.country,
+              },
+            },
+          },
+        });
+
+        if (paymentMethodError) {
+          const fallbackMessage = wooPaymentsConfig?.config?.genericErrorMessage || 'Unable to process WooPayments payment details.';
+          throw new Error(paymentMethodError.message || fallbackMessage);
+        }
+
+        if (!paymentMethod?.id) {
+          throw new Error('WooPayments did not return a payment method.');
+        }
+
+        const storeSession = await buildStoreCheckoutSession();
+        const checkoutRes = await storeFetch('/checkout', {
+          method: 'POST',
+          store: storeSession,
+          body: {
+            billing_address,
+            shipping_address,
+            payment_method: 'woocommerce_payments',
+            payment_data: [
+              { key: 'payment_method', value: 'card' },
+              { key: 'wcpay-payment-method', value: paymentMethod.id },
+              { key: 'wcpay-fraud-prevention-token', value: String(window?.wcpayFraudPreventionToken || '') },
+              { key: 'wcpay-fingerprint', value: '' },
+            ],
+          },
+        });
+
+        await finalizeStoreCheckout(checkoutRes);
+        return;
       }
 
       const orderData = {
@@ -441,6 +605,17 @@ const CheckoutPage = () => {
   const shippingCost = cart.subtotal >= 75 ? 0 : 10;
   const tax = cart.subtotal * 0.08;
   const total = cart.subtotal + shippingCost + tax;
+  const wooPaymentsElementsOptions = useMemo(() => {
+    if (!wooPaymentsConfig?.config?.publishableKey) return null;
+
+    return {
+      mode: total > 0 ? 'payment' : 'setup',
+      amount: toMinorAmount(total),
+      currency: String(wooPaymentsConfig?.config?.currency || wooPaymentsConfig?.blocksData?.currency || 'usd').trim().toLowerCase(),
+      paymentMethodCreation: 'manual',
+      paymentMethodTypes: ['card'],
+    };
+  }, [total, wooPaymentsConfig]);
 
   return (
     <>
@@ -747,24 +922,71 @@ const CheckoutPage = () => {
 
                    {formData.paymentMethod === 'woocommerce_payments' && (
                      <div className="mt-6">
-                       <div className="p-4 border border-border rounded-lg">
-                         <p className="font-semibold">WooPayments</p>
-                         <p className="text-sm text-muted-foreground mt-1">This method is exposed by WooCommerce, but the headless payment details are not wired yet.</p>
-                       </div>
+                       {!!wooPaymentsConfigError && (
+                         <div className="p-4 border border-destructive/30 rounded-lg bg-destructive/5">
+                           <p className="font-semibold">WooPayments unavailable</p>
+                           <p className="text-sm text-muted-foreground mt-1">{wooPaymentsConfigError}</p>
+                         </div>
+                       )}
 
-                       <div className="flex gap-3 mt-6">
-                         <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
-                           Back
-                         </Button>
-                         <Button
-                           onClick={() => handlePlaceOrder()}
-                           disabled={loading}
-                           size="lg"
-                           className="flex-1"
-                         >
-                           {loading ? 'Processing...' : 'Place order'}
-                         </Button>
-                       </div>
+                       {!!wooPaymentsStripePromise && !!wooPaymentsElementsOptions && !wooPaymentsConfigError && (
+                         <Elements stripe={wooPaymentsStripePromise} options={wooPaymentsElementsOptions}>
+                           <div className="p-4 border border-border rounded-lg">
+                             <Label className="cursor-default">Card details</Label>
+                             <div className="mt-3 rounded-lg border border-border bg-background p-3">
+                               <PaymentElement />
+                             </div>
+                             <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
+                           </div>
+
+                           <ElementsConsumer>
+                             {({ stripe, elements }) => (
+                               <div className="flex gap-3 mt-6">
+                                 <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
+                                   Back
+                                 </Button>
+                                 <Button
+                                   onClick={() => handlePlaceOrder({ stripe, elements })}
+                                   disabled={loading || !stripe || !elements}
+                                   size="lg"
+                                   className="flex-1"
+                                 >
+                                   {loading ? 'Processing...' : 'Place order'}
+                                 </Button>
+                               </div>
+                             )}
+                           </ElementsConsumer>
+                         </Elements>
+                       )}
+
+                       {(!wooPaymentsStripePromise || !wooPaymentsElementsOptions) && !wooPaymentsConfigError && (
+                         <>
+                           <div className="p-4 border border-border rounded-lg">
+                             <p className="font-semibold">WooPayments</p>
+                             <p className="text-sm text-muted-foreground mt-1">Loading secure WooPayments form...</p>
+                           </div>
+
+                           <div className="flex gap-3 mt-6">
+                             <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
+                               Back
+                             </Button>
+                             <Button disabled size="lg" className="flex-1">
+                               Place order
+                             </Button>
+                           </div>
+                         </>
+                       )}
+
+                       {!!wooPaymentsConfigError && (
+                         <div className="flex gap-3 mt-6">
+                           <Button onClick={() => setStep(2)} variant="outline" size="lg" className="flex-1">
+                             Back
+                           </Button>
+                           <Button disabled size="lg" className="flex-1">
+                             Place order
+                           </Button>
+                         </div>
+                       )}
                      </div>
                    )}
                  </div>
