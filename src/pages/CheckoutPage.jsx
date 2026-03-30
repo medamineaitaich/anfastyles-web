@@ -31,16 +31,114 @@ const PAYMENT_METHOD_META = {
   },
 };
 
+const SUPPORTED_PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_META);
+const EXPRESS_SHIPPING_PATTERN = /express|expedited|priority|overnight|next[\s-]?day|2[\s-]?3/i;
+
+const SHIPPING_METHOD_META = {
+  standard: {
+    label: 'Standard shipping',
+    fallbackCost: (subtotal) => (subtotal >= 75 ? 0 : 10),
+  },
+  express: {
+    label: 'Express shipping',
+    fallbackCost: () => 25,
+  },
+};
+
 const getPaymentMethodLabel = (method) => PAYMENT_METHOD_META[method]?.label || String(method || '')
   .replace(/[_-]+/g, ' ')
   .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const getPaymentMethodDescription = (method) => PAYMENT_METHOD_META[method]?.description || 'Available payment method';
 
+const getShippingMethodLabel = (method) => SHIPPING_METHOD_META[method]?.label || getPaymentMethodLabel(method);
+
 const toMinorAmount = (value) => {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return 0;
   return Math.max(0, Math.round(amount * 100));
+};
+
+const fromMinorAmount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return amount / 100;
+};
+
+const getShippingFallbackCost = (shippingMethod, subtotal) => {
+  const subtotalAmount = Number(subtotal);
+  const normalizedSubtotal = Number.isFinite(subtotalAmount) ? subtotalAmount : 0;
+  const resolver = SHIPPING_METHOD_META[shippingMethod]?.fallbackCost;
+
+  if (typeof resolver !== 'function') return 0;
+  return resolver(normalizedSubtotal);
+};
+
+const getShippingRateText = (rate) => [
+  rate?.rate_id,
+  rate?.name,
+  rate?.method_id,
+  rate?.description,
+  rate?.delivery_time,
+].filter(Boolean).join(' ').toLowerCase();
+
+const findShippingSelections = ({ shippingRates, shippingMethod, subtotal }) => {
+  if (!Array.isArray(shippingRates) || shippingRates.length === 0) return [];
+
+  const fallbackCostMinor = toMinorAmount(getShippingFallbackCost(shippingMethod, subtotal));
+
+  const findRateForPackage = (pkg) => {
+    const rates = Array.isArray(pkg?.shipping_rates) ? pkg.shipping_rates : [];
+    if (rates.length === 0) return null;
+
+    const normalizedRates = rates.map((rate) => ({
+      rate,
+      text: getShippingRateText(rate),
+      priceMinor: Math.max(0, Math.round(Number(rate?.price || 0))),
+    }));
+
+    if (shippingMethod === 'express') {
+      return normalizedRates.find(({ text }) => EXPRESS_SHIPPING_PATTERN.test(text))
+        || normalizedRates.find(({ priceMinor }) => priceMinor === fallbackCostMinor)
+        || null;
+    }
+
+    if (fallbackCostMinor === 0) {
+      const freeRate = normalizedRates.find(({ rate, priceMinor, text }) => (
+        priceMinor === 0
+        || String(rate?.method_id || '').toLowerCase() === 'free_shipping'
+        || text.includes('free')
+      ));
+      if (freeRate) return freeRate;
+    }
+
+    return normalizedRates.find(({ text }) => (
+      !EXPRESS_SHIPPING_PATTERN.test(text)
+      && (
+        text.includes('standard')
+        || text.includes('ground')
+        || text.includes('flat')
+        || text.includes('free')
+      )
+    ))
+      || normalizedRates.find(({ priceMinor }) => priceMinor === fallbackCostMinor)
+      || normalizedRates.find(({ text }) => !EXPRESS_SHIPPING_PATTERN.test(text))
+      || null;
+  };
+
+  return shippingRates
+    .map((pkg) => {
+      const matchedRate = findRateForPackage(pkg);
+      if (!matchedRate?.rate?.rate_id) return null;
+
+      return {
+        packageId: pkg.package_id,
+        rateId: matchedRate.rate.rate_id,
+        shippingCost: fromMinorAmount(matchedRate.rate.price),
+        shippingTax: fromMinorAmount(matchedRate.rate.taxes),
+      };
+    })
+    .filter(Boolean);
 };
 
 const normalizeWooPaymentsLocale = (value) => {
@@ -91,12 +189,9 @@ const normalizePaymentMethods = (methods) => {
     .filter(Boolean);
 
   const unique = [...new Set(filtered)];
-  const ordered = [
-    ...supportedFirst.filter((method) => unique.includes(method)),
-    ...unique.filter((method) => !supportedFirst.includes(method)),
-  ];
+  const ordered = supportedFirst.filter((method) => unique.includes(method));
 
-  return ordered;
+  return ordered.filter((method) => SUPPORTED_PAYMENT_METHODS.includes(method));
 };
 
 const CheckoutPage = () => {
@@ -106,6 +201,7 @@ const CheckoutPage = () => {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState(['stripe']);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
+  const [paymentMethodsError, setPaymentMethodsError] = useState('');
   const [wooPaymentsConfig, setWooPaymentsConfig] = useState(null);
   const [wooPaymentsConfigError, setWooPaymentsConfigError] = useState('');
   const [stripeCheckoutContext, setStripeCheckoutContext] = useState({ stripe: null, elements: null });
@@ -166,21 +262,28 @@ const CheckoutPage = () => {
     const loadPaymentMethods = async () => {
       try {
         setPaymentMethodsLoading(true);
+        setPaymentMethodsError('');
         const res = await apiServerClient.fetch('/store/cart');
         const json = await res.json().catch(() => null);
         const methods = normalizePaymentMethods(json?.data?.payment_methods);
-        const nextMethods = methods.length > 0 ? methods : ['stripe'];
+        const nextMethods = methods;
 
         if (cancelled) return;
 
         setAvailablePaymentMethods(nextMethods);
         setFormData((prev) => ({
           ...prev,
-          paymentMethod: nextMethods.includes(prev.paymentMethod) ? prev.paymentMethod : nextMethods[0],
+          paymentMethod: nextMethods.includes(prev.paymentMethod) ? prev.paymentMethod : (nextMethods[0] || ''),
         }));
+        setPaymentMethodsError(nextMethods.length === 0 ? 'No supported payment methods are currently available.' : '');
       } catch {
         if (!cancelled) {
-          setAvailablePaymentMethods(['stripe']);
+          setAvailablePaymentMethods([]);
+          setPaymentMethodsError('Unable to load payment methods right now. Please try again.');
+          setFormData((prev) => ({
+            ...prev,
+            paymentMethod: '',
+          }));
         }
       } finally {
         if (!cancelled) {
@@ -328,6 +431,11 @@ const CheckoutPage = () => {
       return;
     }
 
+    if (!formData.paymentMethod || !SUPPORTED_PAYMENT_METHODS.includes(formData.paymentMethod)) {
+      toast.error(paymentMethodsError || 'No supported payment method is currently available.');
+      return;
+    }
+
     setLoading(true);
     try {
       let paymentData = null;
@@ -431,7 +539,32 @@ const CheckoutPage = () => {
           body: { billing_address, shipping_address },
         });
 
-        return updated?.store || storeSession;
+        let nextStoreSession = updated?.store || storeSession;
+        const shippingSelections = findShippingSelections({
+          shippingRates: updated?.data?.shipping_rates,
+          shippingMethod: formData.shippingMethod,
+          subtotal,
+        });
+
+        if (updated?.data?.needs_shipping) {
+          if (shippingSelections.length === 0) {
+            throw new Error(`${getShippingMethodLabel(formData.shippingMethod)} is not available for this address.`);
+          }
+
+          for (const selection of shippingSelections) {
+            const selectedShippingRate = await storeFetch('/cart/select-shipping-rate', {
+              method: 'POST',
+              store: nextStoreSession,
+              body: {
+                package_id: selection.packageId,
+                rate_id: selection.rateId,
+              },
+            });
+            nextStoreSession = selectedShippingRate?.store || nextStoreSession;
+          }
+        }
+
+        return nextStoreSession;
       };
       const finalizeStoreCheckout = async (checkoutRes) => {
         const checkoutData = checkoutRes?.data;
@@ -613,7 +746,13 @@ const CheckoutPage = () => {
         },
         shippingMethod: formData.shippingMethod,
         paymentMethod: paymentMethodGateway,
-        paymentData
+        paymentData,
+        totals: {
+          subtotal,
+          shippingCost,
+          tax,
+          total,
+        },
       };
 
       const response = await apiServerClient.fetch('/orders/create', {
@@ -641,9 +780,10 @@ const CheckoutPage = () => {
     }
   };
 
-  const shippingCost = cart.subtotal >= 75 ? 0 : 10;
-  const tax = cart.subtotal * 0.08;
-  const total = cart.subtotal + shippingCost + tax;
+  const subtotal = Number(cart?.subtotal) || 0;
+  const shippingCost = useMemo(() => getShippingFallbackCost(formData.shippingMethod, subtotal), [formData.shippingMethod, subtotal]);
+  const tax = subtotal * 0.08;
+  const total = subtotal + shippingCost + tax;
   const wooPaymentsElementsOptions = useMemo(() => {
     if (!wooPaymentsConfig?.config?.publishableKey) return null;
 
@@ -660,9 +800,16 @@ const CheckoutPage = () => {
     ? wooPaymentsCheckoutContext
     : stripeCheckoutContext;
 
+  const paymentUnavailableMessage = paymentMethodsError
+    || (!formData.paymentMethod ? 'Payment is currently unavailable.' : '')
+    || (formData.paymentMethod === 'stripe' && !stripePublishableKey ? 'Stripe is not configured for checkout.' : '')
+    || (formData.paymentMethod === 'woocommerce_payments' && wooPaymentsConfigError ? (wooPaymentsConfigError || 'WooPayments is unavailable.') : '');
+
   const placeOrderDisabled = loading
     || paymentMethodsLoading
     || cart.items.length === 0
+    || !formData.paymentMethod
+    || !!paymentUnavailableMessage
     || (formData.paymentMethod === 'stripe' && (!stripePublishableKey || !currentPaymentContext?.stripe || !currentPaymentContext?.elements))
     || (formData.paymentMethod === 'woocommerce_payments' && (
       !!wooPaymentsConfigError
@@ -671,6 +818,12 @@ const CheckoutPage = () => {
       || !currentPaymentContext?.stripe
       || !currentPaymentContext?.elements
     ));
+
+  const placeOrderButtonLabel = loading
+    ? 'Processing...'
+    : paymentUnavailableMessage
+      ? 'Payment unavailable'
+      : 'Place order';
 
   const handleCheckoutSubmit = () => handlePlaceOrder({
     stripe: currentPaymentContext?.stripe || undefined,
@@ -844,7 +997,9 @@ const CheckoutPage = () => {
                             <p className="text-sm text-muted-foreground">5-7 business days</p>
                           </Label>
                         </div>
-                        <span className="font-semibold shrink-0">{cart.subtotal >= 75 ? 'Free' : '$10.00'}</span>
+                        <span className="font-semibold shrink-0">
+                          {getShippingFallbackCost('standard', subtotal) === 0 ? 'Free' : `$${getShippingFallbackCost('standard', subtotal).toFixed(2)}`}
+                        </span>
                       </div>
 
                       <div className="flex items-start justify-between gap-3 border-t border-border/60 px-4 py-3.5 sm:items-center">
@@ -896,10 +1051,14 @@ const CheckoutPage = () => {
                      </RadioGroup>
                    )}
 
+                   {!!paymentMethodsError && (
+                     <p className="mt-4 text-sm text-destructive">{paymentMethodsError}</p>
+                   )}
+
                    {formData.paymentMethod === 'stripe' && (
                      <div className="mt-5">
                        {!stripePublishableKey && (
-                         <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
+                          <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
                       )}
 
                       {!!stripePromise && (
@@ -932,25 +1091,25 @@ const CheckoutPage = () => {
 
                    {formData.paymentMethod === 'woocommerce_payments' && (
                      <div className="mt-5">
-                       {!!wooPaymentsConfigError && (
-                         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-                           <p className="font-semibold">WooPayments unavailable</p>
+                        {!!wooPaymentsConfigError && (
+                          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                            <p className="font-semibold">WooPayments unavailable</p>
                            <p className="text-sm text-muted-foreground mt-1">{wooPaymentsConfigError}</p>
                          </div>
                        )}
 
-                       {!!wooPaymentsStripePromise && !!wooPaymentsElementsOptions && !wooPaymentsConfigError && (
-                         <Elements stripe={wooPaymentsStripePromise} options={wooPaymentsElementsOptions}>
-                           <StripeElementsBridge onChange={handleWooPaymentsContextChange} />
-                           <div className={paymentPanelClassName}>
-                             <Label className="cursor-default">Card details</Label>
-                             <div className="mt-3 rounded-lg bg-background px-2 py-2.5 md:px-3 md:py-3">
-                               <PaymentElement />
-                             </div>
-                             <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
-                           </div>
-                         </Elements>
-                       )}
+                        {!!wooPaymentsStripePromise && !!wooPaymentsElementsOptions && !wooPaymentsConfigError && (
+                          <Elements key={`woopayments-${toMinorAmount(total)}`} stripe={wooPaymentsStripePromise} options={wooPaymentsElementsOptions}>
+                            <StripeElementsBridge onChange={handleWooPaymentsContextChange} />
+                            <div className={paymentPanelClassName}>
+                              <Label className="cursor-default">Card details</Label>
+                              <div className="mt-3 rounded-lg bg-background px-2 py-2.5 md:px-3 md:py-3">
+                                <PaymentElement />
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
+                            </div>
+                          </Elements>
+                        )}
 
                        {(!wooPaymentsStripePromise || !wooPaymentsElementsOptions) && !wooPaymentsConfigError && (
                          <div className={paymentPanelClassName}>
@@ -996,7 +1155,7 @@ const CheckoutPage = () => {
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-semibold font-variant-tabular">${cart.subtotal.toFixed(2)}</span>
+                    <span className="font-semibold font-variant-tabular">${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Shipping</span>
@@ -1023,7 +1182,7 @@ const CheckoutPage = () => {
                   size="lg"
                   className="hidden w-full md:inline-flex"
                 >
-                  {loading ? 'Processing...' : 'Place order'}
+                  {placeOrderButtonLabel}
                 </Button>
 
                 <div className="mt-4 text-xs text-muted-foreground">
@@ -1046,7 +1205,7 @@ const CheckoutPage = () => {
               size="lg"
               className="min-w-[152px] sm:min-w-[170px]"
             >
-              {loading ? 'Processing...' : 'Place order'}
+              {placeOrderButtonLabel}
             </Button>
           </div>
         </div>
