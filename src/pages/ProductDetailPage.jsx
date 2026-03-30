@@ -13,6 +13,7 @@ import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 
 const FALLBACK_DESCRIPTION = 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.';
 const DESCRIPTION_PREVIEW_LENGTH = 220;
+const ADD_TO_CART_TOAST_ID = 'add-to-cart-success';
 const COLOR_SWATCH_MAP = {
   black: '#111827',
   white: '#f8fafc',
@@ -645,7 +646,10 @@ const ProductDetailPage = () => {
 
     localStorage.setItem('anfaCart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
-    toast.success('Added to cart');
+    toast.success('Added to cart', {
+      id: ADD_TO_CART_TOAST_ID,
+      duration: 2200,
+    });
     setCartDrawerOpen(true);
   };
 

@@ -262,8 +262,8 @@ const ShopPage = () => {
               </div>
             </aside>
 
-            <div className="flex-1">
-              <div className="flex justify-between items-center mb-6">
+            <div className="min-w-0 flex-1">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-muted-foreground">
                   {loading ? 'Loading...' : `${products.length} product${products.length === 1 ? '' : 's'}`}
                 </p>
@@ -287,7 +287,7 @@ const ShopPage = () => {
               </div>
 
               {loading ? (
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:gap-3 lg:grid-cols-4">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div key={i} className="space-y-3">
                       <Skeleton className="w-full aspect-square rounded-xl" />
@@ -315,7 +315,7 @@ const ShopPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:gap-3 lg:grid-cols-4">
                     {products.map((product) => (
                       <Link key={product.id} to={`/product/${product.id}`} className="card-product block">
                         <div className="aspect-square bg-muted overflow-hidden">

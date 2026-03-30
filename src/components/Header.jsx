@@ -91,18 +91,18 @@ const Header = ({ onCartClick }) => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <header className="sticky top-0 z-50 bg-background border-b border-border">
+    <header className="sticky top-0 z-50 overflow-x-clip bg-background border-b border-border">
       <div className="bg-primary text-primary-foreground py-2 text-center text-sm font-medium">
         Free shipping over $75
       </div>
       
       <div className="container-custom py-4">
-        <div className="flex items-center justify-between gap-4 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
-          <Link to="/" className="flex items-center gap-2 group md:justify-self-start">
+        <div className="flex min-w-0 items-center justify-between gap-4 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
+          <Link to="/" className="group flex min-w-0 items-center gap-2 md:justify-self-start">
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
               <Leaf className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold tracking-tight">ANFASTYLES</span>
+            <span className="truncate text-xl font-bold tracking-tight">ANFASTYLES</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -121,7 +121,7 @@ const Header = ({ onCartClick }) => {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 md:justify-self-end">
+          <div className="flex shrink-0 items-center gap-2 md:justify-self-end">
             <div ref={desktopSearchRef} className="hidden md:flex items-center gap-2">
               <Button
                 type="button"

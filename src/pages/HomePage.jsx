@@ -231,12 +231,12 @@ const HomePage = () => {
 
         <section className="py-20">
           <div className="container-custom">
-            <div className="flex justify-between items-end mb-8">
-              <div>
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div className="min-w-0">
                 <h2 className="text-3xl md:text-4xl font-bold mb-2 text-balance">Fresh drops</h2>
                 <p className="text-muted-foreground">Latest additions to our conscious collection</p>
               </div>
-              <Link to="/shop">
+              <Link to="/shop" className="shrink-0">
                 <Button variant="outline">
                   View all
                   <ChevronRight className="ml-2 w-4 h-4" />
@@ -245,7 +245,7 @@ const HomePage = () => {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                 {[...Array(12)].map((_, i) => (
                   <div key={i} className="space-y-3">
                     <Skeleton className="w-full aspect-square rounded-xl" />
@@ -255,7 +255,7 @@ const HomePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                 {homeProducts.map((product, index) => (
                   <motion.div
                     key={product.id}

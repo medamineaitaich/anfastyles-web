@@ -167,7 +167,7 @@ const paymentPanelClassName = 'mt-4 rounded-xl bg-muted/30 p-3 md:mt-5 md:p-5';
 const paymentSectionCardClassName = 'bg-card border border-border/60 rounded-2xl p-4 md:p-6';
 const paymentSectionHeaderClassName = 'mb-4 flex items-center gap-3 md:mb-5';
 const paymentMethodListClassName = 'mt-0.5 overflow-hidden rounded-xl border border-border/60 bg-background/40 md:mt-1';
-const paymentMethodOptionClassName = 'flex items-start gap-2.5 px-3 py-2.5 md:gap-3 md:px-4 md:py-3.5';
+const paymentMethodOptionClassName = 'flex items-start gap-2.5 px-3 py-2.5 cursor-pointer md:gap-3 md:px-4 md:py-3.5';
 const paymentSelectedWrapperClassName = 'mt-3 md:mt-5';
 const paymentSelectedPanelClassName = 'rounded-xl bg-muted/30 p-2 md:p-5';
 const paymentElementWrapperClassName = 'mt-1.5 rounded-lg bg-background px-1 py-1.5 md:mt-3 md:px-3 md:py-3';
@@ -1048,12 +1048,13 @@ const CheckoutPage = () => {
                               className={`${paymentMethodOptionClassName} ${
                                 index > 0 ? 'border-t border-border/60' : ''
                               }`}
+                              onClick={() => setFormData(prev => ({ ...prev, paymentMethod: method }))}
                             >
-                             <RadioGroupItem value={method} id={method} />
-                              <Label htmlFor={method} className="cursor-pointer break-words">
-                                <p className="font-semibold">{getPaymentMethodLabel(method)}</p>
-                                <p className="text-sm text-muted-foreground">{getPaymentMethodDescription(method)}</p>
-                              </Label>
+                              <RadioGroupItem value={method} id={method} />
+                               <Label htmlFor={method} className="flex-1 cursor-pointer break-words">
+                                 <p className="font-semibold">{getPaymentMethodLabel(method)}</p>
+                                 <p className="text-sm text-muted-foreground">{getPaymentMethodDescription(method)}</p>
+                               </Label>
                            </div>
                          ))}
                        </div>
@@ -1202,8 +1203,8 @@ const CheckoutPage = () => {
           </div>
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur md:hidden">
-          <div className="mx-auto flex max-w-5xl items-center gap-3">
+        <div className="fixed inset-x-0 bottom-0 z-40 overflow-x-clip border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+          <div className="mx-auto flex min-w-0 max-w-5xl items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
               <p className="text-lg font-bold font-variant-tabular">${total.toFixed(2)}</p>
@@ -1212,7 +1213,7 @@ const CheckoutPage = () => {
               onClick={handleCheckoutSubmit}
               disabled={placeOrderDisabled}
               size="lg"
-              className="min-w-[152px] sm:min-w-[170px]"
+              className="min-w-0 flex-1 whitespace-normal px-4 text-center leading-tight sm:min-w-[170px] sm:flex-none sm:whitespace-nowrap"
             >
               {placeOrderButtonLabel}
             </Button>
