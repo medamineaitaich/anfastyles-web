@@ -1,0 +1,155 @@
+Change 1: Reduce Mobile Padding of Card Details Payment Section
+
+1. Root cause
+The mobile Card details area on Checkout was getting extra space from three stacked wrappers: the outer selected-payment margin, the card-details panel padding, and the inner Stripe/WooPayments wrapper padding. Together they made the block feel overly roomy on mobile.
+
+2. Files changed
+- src/pages/CheckoutPage.jsx
+
+3. Exact changes made
+- Added mobile-specific spacing classes for Card details only.
+- Reduced the outer mobile top spacing before the Stripe and WooPayments card-details block.
+- Reduced the mobile padding of the card-details panel.
+- Reduced the inner wrapper padding around the embedded payment element.
+- Reduced the helper text spacing below the payment element on mobile.
+
+4. Test result
+- npm.cmd ci: passed
+- npm.cmd run build: passed
+- Payment logic was not changed.
+
+5. Remaining blockers
+- No code blockers.
+- A live mobile visual check was still recommended.
+
+
+Change 2: Aggressively Tighten Mobile Spacing of Entire Payment Section
+
+1. Root cause
+The payment section still felt loose because spacing came from the whole stack, not just the inner card field: the outer payment section card, the payment-method list container, each option row, the selected payment wrapper, the selected panel padding, the embedded payment-element wrapper, and helper-text spacing all compounded on mobile.
+
+2. Files changed
+- src/pages/CheckoutPage.jsx
+
+3. Exact changes made
+- Reduced the outer mobile padding of the payment section card.
+- Reduced the payment header bottom spacing on mobile.
+- Tightened the payment method list container and each option row on mobile.
+- Reduced the selected payment wrapper top spacing.
+- Reduced the selected payment panel padding.
+- Reduced the inner embedded payment-element wrapper spacing.
+- Reduced helper-text spacing below the payment UI.
+- Tightened the WooPayments unavailable panel on mobile.
+
+4. Test result
+- npm.cmd run build: passed
+- No checkout or payment logic was changed.
+
+5. Remaining blockers
+- No code blockers.
+- A quick viewport verification was still recommended.
+
+
+Change 3: Fix Mobile Horizontal Overflow / Sideways Shifting
+
+1. Root cause
+The mobile sideways drift came from a mix of shared and page-level overflow issues:
+- root scrolling was only clipped on body
+- the mobile header could exceed the viewport
+- some mobile rows were forced into single-line layouts
+- the Checkout fixed bottom CTA could widen the viewport on smaller phones
+
+2. Files changed
+- src/index.css
+- src/components/Header.jsx
+- src/pages/HomePage.jsx
+- src/pages/ShopPage.jsx
+- src/pages/CheckoutPage.jsx
+
+3. Exact changes made
+- Added horizontal overflow protection to html, body, and #root.
+- Disabled horizontal overscroll drift.
+- Added a global media safety rule so images, video, and canvas cannot exceed container width.
+- Hardened the shared header against mobile overflow with min-w-0 and truncation.
+- Changed the Home "Fresh drops" heading row to wrap on mobile.
+- Added min-w-0 to the Shop main content column and allowed the toolbar to wrap.
+- Made the mobile Checkout sticky bottom bar more resilient and allowed the CTA button to flex.
+
+4. Test result
+- npm.cmd run build: passed
+- No business logic was changed.
+
+5. Remaining blockers
+- No code blockers.
+- A real-device or responsive-mode swipe test was still recommended.
+
+
+Change 4: Refine Product Card Spacing and Border Radius
+
+1. Root cause
+The storefront cards were using larger grid gaps than desired, and the shared product card shell was using a relatively round rounded-xl radius. The spacing issue lived in the Home and Shop grids, while the radius came from the shared .card-product style.
+
+2. Files changed
+- src/index.css
+- src/pages/HomePage.jsx
+- src/pages/ShopPage.jsx
+
+3. Exact changes made
+- Reduced the shared product card corner radius from rounded-xl to rounded-lg.
+- Tightened the Home page product grid gap from gap-6 to gap-3 for both loading and loaded states.
+- Tightened the Shop page product grid gap from gap-3 / gap-4 / gap-6 to gap-2 / gap-2.5 / gap-3 for both loading and loaded states.
+
+4. Test result
+- npm.cmd run build: passed
+- No product logic, cart, checkout, auth, or API code was changed.
+
+5. Remaining blockers
+- No code blockers.
+- A quick responsive visual pass was still recommended.
+
+
+Change 5: Make Each Payment Method Box Fully Clickable
+
+1. Root cause
+Each payment method option on Checkout was rendered as a plain container div, so only the radio control and text label were interactive. Clicking empty space inside the payment method box did not trigger selection.
+
+2. Files changed
+- src/pages/CheckoutPage.jsx
+
+3. Exact changes made
+- Added cursor-pointer to the shared payment method row class.
+- Added an onClick handler to each payment method row so clicking anywhere inside the box updates formData.paymentMethod.
+- Expanded the text label to fill the remaining row width with flex-1 to keep the click target broad.
+- No payment backend logic, Stripe/WooPayments setup, or expanded card-detail panels were changed.
+
+4. Test result
+- npm.cmd run build: passed
+- Payment option selection still compiled cleanly.
+
+5. Remaining blockers
+- No code blockers.
+- A quick browser check on Checkout was still useful.
+
+
+Change 6: Fix Add-to-Cart Success Message / Toast Timing
+
+1. Root cause
+The add-to-cart success feedback used a plain toast.success('Added to cart') call with no stable toast id and no shorter interaction-specific duration. Repeated clicks could create awkward duplicate behavior, and the cart drawer opening immediately afterward could make the toast feel inconsistent because the toast host was not explicitly layered above the drawer overlay.
+
+2. Files changed
+- src/pages/ProductDetailPage.jsx
+- src/components/ui/sonner.jsx
+
+3. Exact changes made
+- Added a stable add-to-cart toast id constant.
+- Updated the success toast to reuse that id and use a shorter 2200ms duration.
+- Raised the Sonner toaster above the cart drawer/sheet overlay with z-[70].
+- This preserved the existing design language while making the confirmation feel more immediate and predictable.
+
+4. Test result
+- npm.cmd run build: passed
+- No checkout, payment, or API logic was changed.
+
+5. Remaining blockers
+- No code blockers.
+- A quick manual add-to-cart browser check was still recommended.
