@@ -97,8 +97,8 @@ const Header = ({ onCartClick }) => {
       </div>
       
       <div className="container-custom py-4">
-        <div className="flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2 group">
+        <div className="flex items-center justify-between gap-4 md:grid md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center">
+          <Link to="/" className="flex items-center gap-2 group md:justify-self-start">
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
               <Leaf className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -121,36 +121,36 @@ const Header = ({ onCartClick }) => {
             ))}
           </nav>
 
-          <div ref={desktopSearchRef} className="hidden md:flex items-center gap-2 flex-1 justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={desktopSearchOpen ? 'Close search' : 'Open search'}
-              onClick={() => setDesktopSearchOpen((open) => !open)}
-            >
-              <Search className="w-5 h-5" />
-            </Button>
+          <div className="flex items-center gap-2 md:justify-self-end">
+            <div ref={desktopSearchRef} className="hidden md:flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={desktopSearchOpen ? 'Close search' : 'Open search'}
+                onClick={() => setDesktopSearchOpen((open) => !open)}
+              >
+                <Search className="w-5 h-5" />
+              </Button>
 
-            <form
-              onSubmit={handleSearchSubmit}
-              className={`overflow-hidden transition-all duration-200 ${
-                desktopSearchOpen ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0 pointer-events-none'
-              }`}
-            >
-              <Input
-                ref={desktopSearchInputRef}
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search products"
-                aria-label="Search products"
-                className="h-9 w-56 lg:w-64"
-              />
-            </form>
-          </div>
+              <form
+                onSubmit={handleSearchSubmit}
+                className={`overflow-hidden transition-all duration-200 ${
+                  desktopSearchOpen ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0 pointer-events-none'
+                }`}
+              >
+                <Input
+                  ref={desktopSearchInputRef}
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search products"
+                  aria-label="Search products"
+                  className="h-9 w-56 lg:w-64"
+                />
+              </form>
+            </div>
 
-          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
