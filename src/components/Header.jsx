@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, User, Menu, Leaf } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -13,6 +13,9 @@ const Header = ({ onCartClick }) => {
   const [cartCount, setCartCount] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [desktopSearchOpen, setDesktopSearchOpen] = useState(false);
+  const desktopSearchRef = useRef(null);
+  const desktopSearchInputRef = useRef(null);
 
   useEffect(() => {
     updateCartCount();
@@ -24,6 +27,35 @@ const Header = ({ onCartClick }) => {
     const params = new URLSearchParams(location.search);
     setSearchTerm(params.get('search') || '');
   }, [location.search]);
+
+  useEffect(() => {
+    if (!desktopSearchOpen) return;
+    desktopSearchInputRef.current?.focus();
+  }, [desktopSearchOpen]);
+
+  useEffect(() => {
+    if (!desktopSearchOpen) return;
+
+    const handleClickOutside = (event) => {
+      if (desktopSearchRef.current && !desktopSearchRef.current.contains(event.target)) {
+        setDesktopSearchOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setDesktopSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [desktopSearchOpen]);
 
   const updateCartCount = () => {
     const cart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"itemCount":0}');
@@ -45,6 +77,7 @@ const Header = ({ onCartClick }) => {
       search: params.toString() ? `?${params.toString()}` : '',
     });
 
+    setDesktopSearchOpen(false);
     setMobileMenuOpen(false);
   };
 
@@ -88,18 +121,34 @@ const Header = ({ onCartClick }) => {
             ))}
           </nav>
 
-          <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center gap-2 flex-1 max-w-sm">
-            <Input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search products"
-              aria-label="Search products"
-            />
-            <Button type="submit" variant="ghost" size="icon" aria-label="Search">
+          <div ref={desktopSearchRef} className="hidden md:flex items-center gap-2 flex-1 justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={desktopSearchOpen ? 'Close search' : 'Open search'}
+              onClick={() => setDesktopSearchOpen((open) => !open)}
+            >
               <Search className="w-5 h-5" />
             </Button>
-          </form>
+
+            <form
+              onSubmit={handleSearchSubmit}
+              className={`overflow-hidden transition-all duration-200 ${
+                desktopSearchOpen ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0 pointer-events-none'
+              }`}
+            >
+              <Input
+                ref={desktopSearchInputRef}
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search products"
+                aria-label="Search products"
+                className="h-9 w-56 lg:w-64"
+              />
+            </form>
+          </div>
 
           <div className="flex items-center gap-2">
             <Button
