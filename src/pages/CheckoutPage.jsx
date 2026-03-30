@@ -164,6 +164,15 @@ const extractCheckoutErrorMessage = (checkoutData, fallback = 'Payment failed') 
 const sectionCardClassName = 'bg-card border border-border/60 rounded-2xl p-5 md:p-6';
 const optionListClassName = 'mt-1 overflow-hidden rounded-xl border border-border/60 bg-background/40';
 const paymentPanelClassName = 'mt-4 rounded-xl bg-muted/30 p-3 md:mt-5 md:p-5';
+const paymentSectionCardClassName = 'bg-card border border-border/60 rounded-2xl p-4 md:p-6';
+const paymentSectionHeaderClassName = 'mb-4 flex items-center gap-3 md:mb-5';
+const paymentMethodListClassName = 'mt-0.5 overflow-hidden rounded-xl border border-border/60 bg-background/40 md:mt-1';
+const paymentMethodOptionClassName = 'flex items-start gap-2.5 px-3 py-2.5 md:gap-3 md:px-4 md:py-3.5';
+const paymentSelectedWrapperClassName = 'mt-3 md:mt-5';
+const paymentSelectedPanelClassName = 'rounded-xl bg-muted/30 p-2 md:p-5';
+const paymentElementWrapperClassName = 'mt-1.5 rounded-lg bg-background px-1 py-1.5 md:mt-3 md:px-3 md:py-3';
+const paymentHelperTextClassName = 'mt-1.5 text-xs text-muted-foreground md:mt-3';
+const paymentErrorMessageClassName = 'mt-3 text-sm text-destructive md:mt-4';
 
 const StripeElementsBridge = ({ onChange }) => {
   const stripe = useStripe();
@@ -1017,8 +1026,8 @@ const CheckoutPage = () => {
 
                 </div>
 
-              <div className={sectionCardClassName}>
-                  <div className="mb-5 flex items-center gap-3">
+              <div className={paymentSectionCardClassName}>
+                  <div className={paymentSectionHeaderClassName}>
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <CreditCard className="w-5 h-5 text-primary" />
                     </div>
@@ -1031,15 +1040,15 @@ const CheckoutPage = () => {
                    {paymentMethodsLoading ? (
                      <p className="text-sm text-muted-foreground">Loading payment methods...</p>
                    ) : (
-                     <RadioGroup value={formData.paymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}>
-                       <div className={optionListClassName}>
-                         {availablePaymentMethods.map((method, index) => (
-                           <div
-                             key={method}
-                             className={`flex items-start gap-3 px-4 py-3.5 ${
-                               index > 0 ? 'border-t border-border/60' : ''
-                             }`}
-                           >
+                      <RadioGroup value={formData.paymentMethod} onValueChange={(value) => setFormData(prev => ({ ...prev, paymentMethod: value }))}>
+                        <div className={paymentMethodListClassName}>
+                          {availablePaymentMethods.map((method, index) => (
+                            <div
+                              key={method}
+                              className={`${paymentMethodOptionClassName} ${
+                                index > 0 ? 'border-t border-border/60' : ''
+                              }`}
+                            >
                              <RadioGroupItem value={method} id={method} />
                               <Label htmlFor={method} className="cursor-pointer break-words">
                                 <p className="font-semibold">{getPaymentMethodLabel(method)}</p>
@@ -1052,26 +1061,26 @@ const CheckoutPage = () => {
                    )}
 
                    {!!paymentMethodsError && (
-                     <p className="mt-4 text-sm text-destructive">{paymentMethodsError}</p>
-                   )}
+                     <p className={paymentErrorMessageClassName}>{paymentMethodsError}</p>
+                    )}
 
-                   {formData.paymentMethod === 'stripe' && (
-                     <div className="mt-5">
-                       {!stripePublishableKey && (
-                          <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
-                      )}
+                    {formData.paymentMethod === 'stripe' && (
+                     <div className={paymentSelectedWrapperClassName}>
+                        {!stripePublishableKey && (
+                           <p className="text-sm text-destructive">Stripe is not configured for checkout.</p>
+                       )}
 
                       {!!stripePromise && (
                         <Elements
                           stripe={stripePromise}
                         >
                           <StripeElementsBridge onChange={handleStripeContextChange} />
-                          <div className={paymentPanelClassName}>
+                          <div className={paymentSelectedPanelClassName}>
                             <Label className="cursor-default">Card details</Label>
-                            <div className="mt-3 rounded-lg bg-background px-2 py-2.5 md:px-3 md:py-3">
+                            <div className={paymentElementWrapperClassName}>
                               <CardElement options={{ hidePostalCode: true }} />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
+                            <p className={paymentHelperTextClassName}>Test mode: use 4242 4242 4242 4242.</p>
                           </div>
                         </Elements>
                       )}
@@ -1080,39 +1089,39 @@ const CheckoutPage = () => {
                      </div>
                    )}
 
-                   {formData.paymentMethod === 'cod' && (
-                     <div className="mt-5">
-                       <div className={paymentPanelClassName}>
-                         <p className="font-semibold">Cash on delivery</p>
-                         <p className="text-sm text-muted-foreground mt-1">Your order will be submitted with WooCommerce Cash on Delivery.</p>
-                       </div>
+                    {formData.paymentMethod === 'cod' && (
+                      <div className={paymentSelectedWrapperClassName}>
+                        <div className={paymentSelectedPanelClassName}>
+                          <p className="font-semibold">Cash on delivery</p>
+                          <p className="text-sm text-muted-foreground mt-1">Your order will be submitted with WooCommerce Cash on Delivery.</p>
+                        </div>
                      </div>
                    )}
 
-                   {formData.paymentMethod === 'woocommerce_payments' && (
-                     <div className="mt-5">
-                        {!!wooPaymentsConfigError && (
-                          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                    {formData.paymentMethod === 'woocommerce_payments' && (
+                      <div className={paymentSelectedWrapperClassName}>
+                         {!!wooPaymentsConfigError && (
+                          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 md:p-4">
                             <p className="font-semibold">WooPayments unavailable</p>
                            <p className="text-sm text-muted-foreground mt-1">{wooPaymentsConfigError}</p>
-                         </div>
+                          </div>
                        )}
 
                         {!!wooPaymentsStripePromise && !!wooPaymentsElementsOptions && !wooPaymentsConfigError && (
                           <Elements key={`woopayments-${toMinorAmount(total)}`} stripe={wooPaymentsStripePromise} options={wooPaymentsElementsOptions}>
                             <StripeElementsBridge onChange={handleWooPaymentsContextChange} />
-                            <div className={paymentPanelClassName}>
+                            <div className={paymentSelectedPanelClassName}>
                               <Label className="cursor-default">Card details</Label>
-                              <div className="mt-3 rounded-lg bg-background px-2 py-2.5 md:px-3 md:py-3">
+                              <div className={paymentElementWrapperClassName}>
                                 <PaymentElement />
                               </div>
-                              <p className="text-xs text-muted-foreground mt-3">Test mode: use 4242 4242 4242 4242.</p>
+                              <p className={paymentHelperTextClassName}>Test mode: use 4242 4242 4242 4242.</p>
                             </div>
                           </Elements>
                         )}
 
                        {(!wooPaymentsStripePromise || !wooPaymentsElementsOptions) && !wooPaymentsConfigError && (
-                         <div className={paymentPanelClassName}>
+                         <div className={paymentSelectedPanelClassName}>
                            <p className="font-semibold">WooPayments</p>
                            <p className="text-sm text-muted-foreground mt-1">Loading secure WooPayments form...</p>
                          </div>
