@@ -151,8 +151,8 @@ const CartPage = () => {
                 </div>
               </div>
 
-              <div className="min-w-0 md:w-full">
-                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 md:sticky md:top-24">
+              <aside className="min-w-0 self-start md:sticky md:top-24">
+                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 md:max-h-[calc(100vh-7rem)] md:overflow-y-auto">
                   <h2 className="text-xl font-bold mb-4">Order summary</h2>
                   
                   <div className="space-y-3 mb-4">
@@ -179,19 +179,21 @@ const CartPage = () => {
                     <span className="font-bold text-xl font-variant-tabular">${total.toFixed(2)}</span>
                   </div>
 
-                  <Link to="/checkout">
-                    <Button size="lg" className="w-full">
-                      Proceed to checkout
-                    </Button>
-                  </Link>
+                  <div className="mt-6 border-t border-border/60 bg-card pt-4 md:sticky md:bottom-0 md:-mx-6 md:px-6 md:pb-1">
+                    <Link to="/checkout">
+                      <Button size="lg" className="w-full">
+                        Proceed to checkout
+                      </Button>
+                    </Link>
 
-                  <Link to="/shop">
-                    <Button variant="outline" size="lg" className="w-full mt-3">
-                      Continue shopping
-                    </Button>
-                  </Link>
+                    <Link to="/shop">
+                      <Button variant="outline" size="lg" className="w-full mt-3">
+                        Continue shopping
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              </aside>
             </div>
           )}
         </div>

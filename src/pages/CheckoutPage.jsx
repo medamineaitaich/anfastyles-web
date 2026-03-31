@@ -177,6 +177,9 @@ const paymentSelectedPanelClassName = 'rounded-xl bg-muted/30 p-2 md:p-5';
 const paymentElementWrapperClassName = 'mt-1.5 rounded-lg bg-background px-1 py-1.5 md:mt-3 md:px-3 md:py-3';
 const paymentHelperTextClassName = 'mt-1.5 text-xs text-muted-foreground md:mt-3';
 const paymentErrorMessageClassName = 'mt-3 text-sm text-destructive md:mt-4';
+const stickySidebarClassName = 'min-w-0 self-start md:sticky md:top-24';
+const stickySummaryCardClassName = 'rounded-2xl border border-border/60 bg-card p-5 md:max-h-[calc(100vh-7rem)] md:overflow-y-auto md:p-6';
+const stickySummaryActionClassName = 'mt-5 border-t border-border/60 bg-card pt-4 md:sticky md:bottom-0 md:-mx-6 md:px-6 md:pb-1';
 const countryOptions = [
   { value: 'US', label: 'United States' },
   { value: 'CA', label: 'Canada' },
@@ -1705,8 +1708,8 @@ const CheckoutPage = () => {
                  </div>
             </div>
 
-            <div className="min-w-0 md:w-full">
-              <div className="rounded-2xl border border-border/60 bg-card p-5 md:sticky md:top-24 md:p-6">
+            <aside className={stickySidebarClassName}>
+              <div className={stickySummaryCardClassName}>
                 <h2 className="text-xl font-bold mb-4">Order summary</h2>
 
                 {cart.items.length > 0 && (
@@ -1757,20 +1760,22 @@ const CheckoutPage = () => {
                   <span className="font-bold text-xl font-variant-tabular">${total.toFixed(2)}</span>
                 </div>
 
-                <Button
-                  onClick={handleCheckoutSubmit}
-                  disabled={placeOrderDisabled}
-                  size="lg"
-                  className="hidden w-full md:inline-flex"
-                >
-                  {placeOrderButtonLabel}
-                </Button>
+                <div className={stickySummaryActionClassName}>
+                  <Button
+                    onClick={handleCheckoutSubmit}
+                    disabled={placeOrderDisabled}
+                    size="lg"
+                    className="hidden w-full md:inline-flex"
+                  >
+                    {placeOrderButtonLabel}
+                  </Button>
 
-                <div className="mt-4 text-xs text-muted-foreground">
-                  <p>By placing this order, you agree to our Terms of Service and Privacy Policy.</p>
+                  <div className="mt-4 text-xs text-muted-foreground">
+                    <p>By placing this order, you agree to our Terms of Service and Privacy Policy.</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </aside>
           </div>
         </div>
 
