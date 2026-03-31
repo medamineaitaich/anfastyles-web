@@ -5,6 +5,7 @@ import { CreditCard, Truck, MapPin } from 'lucide-react';
 import { CardElement, Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -173,6 +174,141 @@ const paymentSelectedPanelClassName = 'rounded-xl bg-muted/30 p-2 md:p-5';
 const paymentElementWrapperClassName = 'mt-1.5 rounded-lg bg-background px-1 py-1.5 md:mt-3 md:px-3 md:py-3';
 const paymentHelperTextClassName = 'mt-1.5 text-xs text-muted-foreground md:mt-3';
 const paymentErrorMessageClassName = 'mt-3 text-sm text-destructive md:mt-4';
+const countryOptions = [
+  { value: 'US', label: 'United States' },
+  { value: 'CA', label: 'Canada' },
+  { value: 'UK', label: 'United Kingdom' },
+];
+
+const createAddressFormState = (overrides = {}) => ({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  address: '',
+  city: '',
+  state: '',
+  zip: '',
+  country: 'US',
+  ...overrides,
+});
+
+const getAddressErrorKey = (formKey, field) => `${formKey}.${field}`;
+
+const AddressFields = ({
+  formKey,
+  values,
+  errors,
+  onFieldChange,
+  onCountryChange,
+  includeEmail,
+}) => (
+  <div className="grid gap-4 md:grid-cols-2">
+    <div>
+      <Label htmlFor={`${formKey}-firstName`}>First name *</Label>
+      <Input
+        id={`${formKey}-firstName`}
+        value={values.firstName}
+        onChange={(event) => onFieldChange('firstName', event.target.value)}
+        className={errors[getAddressErrorKey(formKey, 'firstName')] ? 'border-destructive' : ''}
+      />
+      {errors[getAddressErrorKey(formKey, 'firstName')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'firstName')]}</p>}
+    </div>
+
+    <div>
+      <Label htmlFor={`${formKey}-lastName`}>Last name *</Label>
+      <Input
+        id={`${formKey}-lastName`}
+        value={values.lastName}
+        onChange={(event) => onFieldChange('lastName', event.target.value)}
+        className={errors[getAddressErrorKey(formKey, 'lastName')] ? 'border-destructive' : ''}
+      />
+      {errors[getAddressErrorKey(formKey, 'lastName')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'lastName')]}</p>}
+    </div>
+
+    {includeEmail && (
+      <div>
+        <Label htmlFor={`${formKey}-email`}>Email *</Label>
+        <Input
+          id={`${formKey}-email`}
+          type="email"
+          value={values.email}
+          onChange={(event) => onFieldChange('email', event.target.value)}
+          className={errors[getAddressErrorKey(formKey, 'email')] ? 'border-destructive' : ''}
+        />
+        {errors[getAddressErrorKey(formKey, 'email')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'email')]}</p>}
+      </div>
+    )}
+
+    <div>
+      <Label htmlFor={`${formKey}-phone`}>Phone</Label>
+      <Input
+        id={`${formKey}-phone`}
+        type="tel"
+        value={values.phone}
+        onChange={(event) => onFieldChange('phone', event.target.value)}
+      />
+    </div>
+
+    <div className="md:col-span-2">
+      <Label htmlFor={`${formKey}-address`}>Address *</Label>
+      <Input
+        id={`${formKey}-address`}
+        value={values.address}
+        onChange={(event) => onFieldChange('address', event.target.value)}
+        className={errors[getAddressErrorKey(formKey, 'address')] ? 'border-destructive' : ''}
+      />
+      {errors[getAddressErrorKey(formKey, 'address')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'address')]}</p>}
+    </div>
+
+    <div>
+      <Label htmlFor={`${formKey}-city`}>City *</Label>
+      <Input
+        id={`${formKey}-city`}
+        value={values.city}
+        onChange={(event) => onFieldChange('city', event.target.value)}
+        className={errors[getAddressErrorKey(formKey, 'city')] ? 'border-destructive' : ''}
+      />
+      {errors[getAddressErrorKey(formKey, 'city')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'city')]}</p>}
+    </div>
+
+    <div>
+      <Label htmlFor={`${formKey}-state`}>State *</Label>
+      <Input
+        id={`${formKey}-state`}
+        value={values.state}
+        onChange={(event) => onFieldChange('state', event.target.value)}
+        className={errors[getAddressErrorKey(formKey, 'state')] ? 'border-destructive' : ''}
+      />
+      {errors[getAddressErrorKey(formKey, 'state')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'state')]}</p>}
+    </div>
+
+    <div>
+      <Label htmlFor={`${formKey}-zip`}>ZIP code *</Label>
+      <Input
+        id={`${formKey}-zip`}
+        value={values.zip}
+        onChange={(event) => onFieldChange('zip', event.target.value)}
+        className={errors[getAddressErrorKey(formKey, 'zip')] ? 'border-destructive' : ''}
+      />
+      {errors[getAddressErrorKey(formKey, 'zip')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'zip')]}</p>}
+    </div>
+
+    <div>
+      <Label htmlFor={`${formKey}-country`}>Country</Label>
+      <Select value={values.country} onValueChange={onCountryChange}>
+        <SelectTrigger id={`${formKey}-country`}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {countryOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
+);
 
 const StripeElementsBridge = ({ onChange }) => {
   const stripe = useStripe();
@@ -216,16 +352,10 @@ const CheckoutPage = () => {
   const [stripeCheckoutContext, setStripeCheckoutContext] = useState({ stripe: null, elements: null });
   const [wooPaymentsCheckoutContext, setWooPaymentsCheckoutContext] = useState({ stripe: null, elements: null });
 
+  const [billingData, setBillingData] = useState(() => createAddressFormState());
+  const [shippingData, setShippingData] = useState(() => createAddressFormState());
+  const [shippingSameAsBilling, setShippingSameAsBilling] = useState(true);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-    country: 'US',
     shippingMethod: 'standard',
     paymentMethod: 'stripe'
   });
@@ -412,23 +542,58 @@ const CheckoutPage = () => {
     ));
   }, []);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+  const handleAddressFieldChange = (formKey, field, value) => {
+    const setter = formKey === 'billing' ? setBillingData : setShippingData;
+    setter((prev) => ({ ...prev, [field]: value }));
+
+    const errorKey = getAddressErrorKey(formKey, field);
+    if (errors[errorKey]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[errorKey];
+        return next;
+      });
     }
   };
 
+  const handleAddressCountryChange = (formKey, value) => {
+    const setter = formKey === 'billing' ? setBillingData : setShippingData;
+    setter((prev) => ({ ...prev, country: value }));
+  };
+
+  const getValidationLabel = (field) => {
+    if (field === 'zip') return 'ZIP code';
+    if (field === 'firstName') return 'First name';
+    if (field === 'lastName') return 'Last name';
+    return field.charAt(0).toUpperCase() + field.slice(1);
+  };
+
+  const getAddressValidationErrors = (formKey, values, requiredFields) => {
+    const nextErrors = {};
+
+    requiredFields.forEach((field) => {
+      if (!String(values[field] || '').trim()) {
+        nextErrors[getAddressErrorKey(formKey, field)] = `${getValidationLabel(field)} is required`;
+      }
+    });
+
+    return nextErrors;
+  };
+
+  const getShippingFormValues = () => {
+    if (!shippingSameAsBilling) return shippingData;
+
+    return {
+      ...billingData,
+      email: '',
+    };
+  };
+
   const validateCheckoutForm = () => {
-    const newErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
-    if (!formData.city.trim()) newErrors.city = 'City is required';
-    if (!formData.state.trim()) newErrors.state = 'State is required';
-    if (!formData.zip.trim()) newErrors.zip = 'ZIP code is required';
+    const newErrors = {
+      ...getAddressValidationErrors('billing', billingData, ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'zip']),
+      ...(shippingSameAsBilling ? {} : getAddressValidationErrors('shipping', shippingData, ['firstName', 'lastName', 'address', 'city', 'state', 'zip'])),
+    };
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -503,30 +668,31 @@ const CheckoutPage = () => {
 
         return Number(match.id);
       };
+      const shippingFormValues = getShippingFormValues();
       const billing_address = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
+        first_name: billingData.firstName,
+        last_name: billingData.lastName,
         company: '',
-        address_1: formData.address,
+        address_1: billingData.address,
         address_2: '',
-        city: formData.city,
-        state: formData.state,
-        postcode: formData.zip,
-        country: formData.country,
-        email: formData.email,
-        phone: formData.phone || '',
+        city: billingData.city,
+        state: billingData.state,
+        postcode: billingData.zip,
+        country: billingData.country,
+        email: billingData.email,
+        phone: billingData.phone || '',
       };
       const shipping_address = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
+        first_name: shippingFormValues.firstName,
+        last_name: shippingFormValues.lastName,
         company: '',
-        address_1: formData.address,
+        address_1: shippingFormValues.address,
         address_2: '',
-        city: formData.city,
-        state: formData.state,
-        postcode: formData.zip,
-        country: formData.country,
-        phone: formData.phone || '',
+        city: shippingFormValues.city,
+        state: shippingFormValues.state,
+        postcode: shippingFormValues.zip,
+        country: shippingFormValues.country,
+        phone: shippingFormValues.phone || '',
       };
 
       const buildStoreCheckoutSession = async () => {
@@ -588,6 +754,11 @@ const CheckoutPage = () => {
         navigate(`/order-confirmation?orderId=${checkoutData.order_id}&orderNumber=${checkoutData.order_number || checkoutData.order_id}`);
       };
 
+      const createCheckoutBody = (paymentMethod, paymentDataEntries) => ({
+        payment_method: paymentMethod,
+        payment_data: paymentDataEntries,
+      });
+
       if (formData.paymentMethod === 'stripe') {
         if (!stripe || !elements) {
           throw new Error('Payment form is not ready. Please refresh the page and try again.');
@@ -609,15 +780,15 @@ const CheckoutPage = () => {
           type: 'card',
           card: cardElement,
           billing_details: {
-            name: `${formData.firstName} ${formData.lastName}`.trim(),
-            email: formData.email,
-            phone: formData.phone || undefined,
+            name: `${billingData.firstName} ${billingData.lastName}`.trim(),
+            email: billingData.email,
+            phone: billingData.phone || undefined,
             address: {
-              line1: formData.address,
-              city: formData.city,
-              state: formData.state,
-              postal_code: formData.zip,
-              country: formData.country,
+              line1: billingData.address,
+              city: billingData.city,
+              state: billingData.state,
+              postal_code: billingData.zip,
+              country: billingData.country,
             },
           },
         });
@@ -637,19 +808,14 @@ const CheckoutPage = () => {
         const checkoutRes = await storeFetch('/checkout', {
           method: 'POST',
           store: storeSession,
-          body: {
-            billing_address,
-            shipping_address,
-            payment_method: 'stripe',
-            payment_data: [
-              { key: 'billing_email', value: formData.email },
-              { key: 'billing_first_name', value: formData.firstName },
-              { key: 'billing_last_name', value: formData.lastName },
-              { key: 'payment_method', value: 'stripe' },
-              { key: 'wc-stripe-payment-method', value: paymentMethod.id },
-              { key: 'wc-stripe-is-deferred-intent', value: true },
-            ],
-          },
+          body: createCheckoutBody('stripe', [
+            { key: 'billing_email', value: billingData.email },
+            { key: 'billing_first_name', value: billingData.firstName },
+            { key: 'billing_last_name', value: billingData.lastName },
+            { key: 'payment_method', value: 'stripe' },
+            { key: 'wc-stripe-payment-method', value: paymentMethod.id },
+            { key: 'wc-stripe-is-deferred-intent', value: true },
+          ]),
         });
         await finalizeStoreCheckout(checkoutRes);
         return;
@@ -660,14 +826,9 @@ const CheckoutPage = () => {
         const checkoutRes = await storeFetch('/checkout', {
           method: 'POST',
           store: storeSession,
-          body: {
-            billing_address,
-            shipping_address,
-            payment_method: 'cod',
-            payment_data: [
-              { key: 'payment_method', value: 'cod' },
-            ],
-          },
+          body: createCheckoutBody('cod', [
+            { key: 'payment_method', value: 'cod' },
+          ]),
         });
 
         await finalizeStoreCheckout(checkoutRes);
@@ -692,15 +853,15 @@ const CheckoutPage = () => {
           elements,
           params: {
             billing_details: {
-              name: `${formData.firstName} ${formData.lastName}`.trim(),
-              email: formData.email,
-              phone: formData.phone || undefined,
+              name: `${billingData.firstName} ${billingData.lastName}`.trim(),
+              email: billingData.email,
+              phone: billingData.phone || undefined,
               address: {
-                line1: formData.address,
-                city: formData.city,
-                state: formData.state,
-                postal_code: formData.zip,
-                country: formData.country,
+                line1: billingData.address,
+                city: billingData.city,
+                state: billingData.state,
+                postal_code: billingData.zip,
+                country: billingData.country,
               },
             },
           },
@@ -719,17 +880,12 @@ const CheckoutPage = () => {
         const checkoutRes = await storeFetch('/checkout', {
           method: 'POST',
           store: storeSession,
-          body: {
-            billing_address,
-            shipping_address,
-            payment_method: 'woocommerce_payments',
-            payment_data: [
-              { key: 'payment_method', value: 'card' },
-              { key: 'wcpay-payment-method', value: paymentMethod.id },
-              { key: 'wcpay-fraud-prevention-token', value: String(window?.wcpayFraudPreventionToken || '') },
-              { key: 'wcpay-fingerprint', value: '' },
-            ],
-          },
+          body: createCheckoutBody('woocommerce_payments', [
+            { key: 'payment_method', value: 'card' },
+            { key: 'wcpay-payment-method', value: paymentMethod.id },
+            { key: 'wcpay-fraud-prevention-token', value: String(window?.wcpayFraudPreventionToken || '') },
+            { key: 'wcpay-fingerprint', value: '' },
+          ]),
         });
 
         await finalizeStoreCheckout(checkoutRes);
@@ -743,16 +899,17 @@ const CheckoutPage = () => {
           price: parseFloat(item.price)
         })),
         customerInfo: {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          zip: formData.zip,
-          country: formData.country
+          firstName: billingData.firstName,
+          lastName: billingData.lastName,
+          email: billingData.email,
+          phone: billingData.phone,
+          address: billingData.address,
+          city: billingData.city,
+          state: billingData.state,
+          zip: billingData.zip,
+          country: billingData.country
         },
+        shippingAddress: shipping_address,
         shippingMethod: formData.shippingMethod,
         paymentMethod: paymentMethodGateway,
         paymentData,
@@ -871,119 +1028,86 @@ const CheckoutPage = () => {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">First name *</Label>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className={errors.firstName ? 'border-destructive' : ''}
-                      />
-                      {errors.firstName && <p className="text-sm text-destructive mt-1">{errors.firstName}</p>}
-                    </div>
+                  <AddressFields
+                    formKey="billing"
+                    values={billingData}
+                    errors={errors}
+                    onFieldChange={(field, value) => handleAddressFieldChange('billing', field, value)}
+                    onCountryChange={(value) => handleAddressCountryChange('billing', value)}
+                    includeEmail
+                  />
 
-                    <div>
-                      <Label htmlFor="lastName">Last name *</Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className={errors.lastName ? 'border-destructive' : ''}
-                      />
-                      {errors.lastName && <p className="text-sm text-destructive mt-1">{errors.lastName}</p>}
-                    </div>
+                  <div className="mt-5 flex items-start gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3">
+                    <Checkbox
+                      id="shippingSameAsBilling"
+                      checked={shippingSameAsBilling}
+                      onCheckedChange={(checked) => {
+                        const nextChecked = checked !== false;
+                        setShippingSameAsBilling(nextChecked);
 
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className={errors.email ? 'border-destructive' : ''}
-                      />
-                      {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
-                    </div>
+                        if (!nextChecked) {
+                          setShippingData((prev) => {
+                            const hasExistingValues = Object.entries(prev).some(([field, value]) => field !== 'country' && String(value || '').trim());
+                            return hasExistingValues ? prev : {
+                              ...prev,
+                              firstName: billingData.firstName,
+                              lastName: billingData.lastName,
+                              phone: billingData.phone,
+                              address: billingData.address,
+                              city: billingData.city,
+                              state: billingData.state,
+                              zip: billingData.zip,
+                              country: billingData.country,
+                            };
+                          });
+                          return;
+                        }
 
-                    <div>
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-
-                    <div className="md:col-span-2">
-                      <Label htmlFor="address">Address *</Label>
-                      <Input
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        className={errors.address ? 'border-destructive' : ''}
-                      />
-                      {errors.address && <p className="text-sm text-destructive mt-1">{errors.address}</p>}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="city">City *</Label>
-                      <Input
-                        id="city"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        className={errors.city ? 'border-destructive' : ''}
-                      />
-                      {errors.city && <p className="text-sm text-destructive mt-1">{errors.city}</p>}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="state">State *</Label>
-                      <Input
-                        id="state"
-                        name="state"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        className={errors.state ? 'border-destructive' : ''}
-                      />
-                      {errors.state && <p className="text-sm text-destructive mt-1">{errors.state}</p>}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="zip">ZIP code *</Label>
-                      <Input
-                        id="zip"
-                        name="zip"
-                        value={formData.zip}
-                        onChange={handleInputChange}
-                        className={errors.zip ? 'border-destructive' : ''}
-                      />
-                      {errors.zip && <p className="text-sm text-destructive mt-1">{errors.zip}</p>}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="country">Country</Label>
-                      <Select value={formData.country} onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}>
-                        <SelectTrigger id="country">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="US">United States</SelectItem>
-                          <SelectItem value="CA">Canada</SelectItem>
-                          <SelectItem value="UK">United Kingdom</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          Object.keys(next).forEach((key) => {
+                            if (key.startsWith('shipping.')) delete next[key];
+                          });
+                          return next;
+                        });
+                      }}
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="shippingSameAsBilling" className="cursor-pointer font-semibold">
+                        Shipping address is the same as billing
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {shippingSameAsBilling
+                          ? 'Your billing details will also be used for delivery.'
+                          : 'Enter a separate shipping address for delivery.'}
+                      </p>
                     </div>
                   </div>
 
                 </div>
+
+              {!shippingSameAsBilling && (
+                <div className={sectionCardClassName}>
+                  <div className="mb-6 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">Shipping address</h2>
+                      <p className="text-sm text-muted-foreground">We'll use this address for delivery only.</p>
+                    </div>
+                  </div>
+
+                  <AddressFields
+                    formKey="shipping"
+                    values={shippingData}
+                    errors={errors}
+                    onFieldChange={(field, value) => handleAddressFieldChange('shipping', field, value)}
+                    onCountryChange={(value) => handleAddressCountryChange('shipping', value)}
+                    includeEmail={false}
+                  />
+                </div>
+              )}
 
               <div className={sectionCardClassName}>
                   <div className="mb-6 flex items-center gap-3">
