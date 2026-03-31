@@ -1390,8 +1390,8 @@ const CheckoutPage = () => {
             Complete your details, choose a delivery option, and finish payment in one place.
           </p>
 
-          <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_320px] md:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="min-w-0 space-y-6">
               <div className={sectionCardClassName}>
                   <div className="mb-6 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -1705,8 +1705,8 @@ const CheckoutPage = () => {
                  </div>
             </div>
 
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 rounded-2xl border border-border/60 bg-card p-5 md:p-6">
+            <div className="min-w-0 md:w-full">
+              <div className="rounded-2xl border border-border/60 bg-card p-5 md:sticky md:top-24 md:p-6">
                 <h2 className="text-xl font-bold mb-4">Order summary</h2>
 
                 {cart.items.length > 0 && (

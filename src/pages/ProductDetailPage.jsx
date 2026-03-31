@@ -18,27 +18,44 @@ const ADD_TO_CART_TOAST_ID = 'add-to-cart-success';
 const COLOR_SWATCH_MAP = {
   black: '#111827',
   white: '#f8fafc',
-  red: '#dc2626',
-  green: '#15803d',
+  natural: '#f3ede0',
+  daisy: '#f5dc4d',
   yellow: '#eab308',
-  blue: '#2563eb',
-  brown: '#8b5e3c',
+  gold: '#ca8a04',
+  mustard: '#d4a017',
+  red: '#dc2626',
+  cardinal: '#b91c1c',
+  maroon: '#7f1d1d',
+  burgundy: '#7f1d1d',
   orange: '#f97316',
+  coral: '#f97316',
   pink: '#ec4899',
   purple: '#7c3aed',
+  blue: '#2563eb',
+  royal: '#1d4ed8',
+  navy: '#1e3a8a',
+  teal: '#0f766e',
+  turquoise: '#0f766e',
+  green: '#15803d',
+  'irish-green': '#009a44',
+  'military-green': '#66724a',
+  olive: '#556b2f',
+  'forest-green': '#166534',
+  sage: '#93a084',
+  mint: '#a7d8c3',
+  brown: '#8b5e3c',
+  tan: '#d2b48c',
   gray: '#6b7280',
   grey: '#6b7280',
+  ash: '#d1d5db',
+  charcoal: '#4b5563',
+  graphite: '#374151',
+  heather: '#9ca3af',
+  'sport-grey': '#b6bcc6',
+  'sport-gray': '#b6bcc6',
+  silver: '#94a3b8',
   beige: '#d6c7a1',
   cream: '#f5f1df',
-  navy: '#1e3a8a',
-  maroon: '#7f1d1d',
-  olive: '#556b2f',
-  teal: '#0f766e',
-  gold: '#ca8a04',
-  silver: '#94a3b8',
-  tan: '#d2b48c',
-  burgundy: '#7f1d1d',
-  'forest-green': '#166534',
   'earth-brown': '#8b5e3c',
 };
 const ATTRIBUTE_KIND_ALIASES = {
@@ -357,8 +374,15 @@ const getColorSwatchStyle = (colorLabel) => {
   const directMatch = COLOR_SWATCH_MAP[normalized];
   if (directMatch) return { background: directMatch };
 
+  const normalizedTokens = normalized.split('-').filter(Boolean);
+
   for (const [token, color] of Object.entries(COLOR_SWATCH_MAP)) {
     if (normalized.includes(token)) return { background: color };
+
+    const tokenParts = token.split('-').filter(Boolean);
+    if (tokenParts.every((part) => normalizedTokens.includes(part))) {
+      return { background: color };
+    }
   }
 
   return {

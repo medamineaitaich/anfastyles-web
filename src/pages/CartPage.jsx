@@ -80,8 +80,8 @@ const CartPage = () => {
               </Link>
             </div>
           ) : (
-            <div className="grid gap-6 md:gap-8 lg:grid-cols-3">
-              <div className="lg:col-span-2">
+            <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_320px] md:items-start md:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-w-0">
                 {cart.subtotal < 75 && (
                   <div className="bg-muted rounded-xl p-4 sm:p-6 mb-6">
                     <p className="text-sm font-medium mb-3">
@@ -151,8 +151,8 @@ const CartPage = () => {
                 </div>
               </div>
 
-              <div className="lg:col-span-1">
-                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 sticky top-24">
+              <div className="min-w-0 md:w-full">
+                <div className="bg-card border border-border rounded-xl p-4 sm:p-6 md:sticky md:top-24">
                   <h2 className="text-xl font-bold mb-4">Order summary</h2>
                   
                   <div className="space-y-3 mb-4">
