@@ -563,6 +563,13 @@ const ProductDetailPage = () => {
     if (selectedColorDisabled) setSelectedColor('');
   }, [selectedColorDisabled]);
 
+  const missingSelections = requiredAttributeKinds.filter((kind) => !selectedValues[kind]);
+  const missingSelectionLabel = missingSelections.join(' and ');
+  const canClearSelections = hasRealVariationData && Boolean(selectedSize || selectedColor);
+  const canAddToCart = hasRealVariationData
+    ? Boolean(selectedVariation?.id) && selectedVariation.inStock && missingSelections.length === 0
+    : productInStock;
+
   useEffect(() => {
     if (missingSelections.length === 0) {
       setSelectionErrorVisible(false);
@@ -580,13 +587,6 @@ const ProductDetailPage = () => {
   useEffect(() => {
     setQuantity((currentQuantity) => Math.min(Math.max(1, currentQuantity), maxQuantity));
   }, [maxQuantity]);
-
-  const missingSelections = requiredAttributeKinds.filter((kind) => !selectedValues[kind]);
-  const missingSelectionLabel = missingSelections.join(' and ');
-  const canClearSelections = hasRealVariationData && Boolean(selectedSize || selectedColor);
-  const canAddToCart = hasRealVariationData
-    ? Boolean(selectedVariation?.id) && selectedVariation.inStock && missingSelections.length === 0
-    : productInStock;
 
   const availabilityText = (() => {
     if (!productInStock) return 'Out of stock';
