@@ -245,7 +245,7 @@ const HomePage = () => {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-0.5 md:grid-cols-3 lg:grid-cols-4 lg:gap-3">
                 {[...Array(12)].map((_, i) => (
                   <div key={i} className="space-y-3">
                     <Skeleton className="w-full aspect-square rounded-xl" />
@@ -255,7 +255,7 @@ const HomePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-0.5 md:grid-cols-3 lg:grid-cols-4 lg:gap-3">
                 {homeProducts.map((product, index) => (
                   <motion.div
                     key={product.id}

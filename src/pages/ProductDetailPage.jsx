@@ -346,7 +346,7 @@ const buildAttributeGroups = (product, variationEntries) => {
     }
   }
 
-  return ['size', 'color']
+  return ['color', 'size']
     .map((kind) => groups.get(kind))
     .filter((group) => group && group.options.length > 0);
 };
@@ -671,8 +671,10 @@ const ProductDetailPage = () => {
             <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.45fr)]">
               <div className="space-y-4">
                 <Skeleton className="aspect-[4/5] w-full rounded-xl sm:aspect-square md:aspect-[4/5]" />
-                <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-4">
-                  {[1, 2, 3, 4].map((item) => <Skeleton key={item} className="aspect-square rounded-lg" />)}
+                <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[1, 2, 3, 4].map((item) => (
+                    <Skeleton key={item} className="h-20 w-20 shrink-0 rounded-lg" />
+                  ))}
                 </div>
               </div>
               <div className="space-y-6">
@@ -766,13 +768,13 @@ const ProductDetailPage = () => {
               </div>
 
               {images.length > 1 && (
-                <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5 md:grid-cols-4">
+                <div className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {images.map((img, index) => (
                     <button
                       key={`${img}-${index}`}
                       type="button"
                       onClick={() => setSelectedImage(index)}
-                      className={`aspect-square overflow-hidden rounded-lg border-2 bg-muted transition-all duration-200 ${
+                      className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-all duration-200 ${
                         selectedImage === index ? 'border-primary' : 'border-transparent hover:border-border'
                       }`}
                     >
@@ -789,7 +791,7 @@ const ProductDetailPage = () => {
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold">Choose your options</p>
-                      <p className="text-xs text-muted-foreground">Select an available size and color before adding to cart.</p>
+                      <p className="text-xs text-muted-foreground">Select an available color and size before adding to cart.</p>
                     </div>
                     <button
                       type="button"
@@ -803,36 +805,6 @@ const ProductDetailPage = () => {
                 )}
 
                 <div className="space-y-5">
-                  {sizeOptions.length > 0 && (
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold">Size</label>
-                      <div className="flex flex-wrap gap-2">
-                        {sizeOptions.map((option) => {
-                          const isSelected = selectedSize === option.label;
-
-                          return (
-                            <button
-                              key={option.label}
-                              type="button"
-                              disabled={option.disabled}
-                              onClick={() => setSelectedSize(option.label)}
-                              aria-pressed={isSelected}
-                              className={`min-w-[3.25rem] rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-200 ${
-                                option.disabled
-                                  ? 'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground opacity-50'
-                                  : isSelected
-                                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                                    : 'border-border bg-background hover:border-primary/50 hover:bg-primary/5'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
                   {colorOptions.length > 0 && (
                     <div>
                       <label className="mb-2 block text-sm font-semibold">Color</label>
@@ -862,6 +834,36 @@ const ProductDetailPage = () => {
                               <span className="truncate font-medium">
                                 {option.label}
                               </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {sizeOptions.length > 0 && (
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold">Size</label>
+                      <div className="flex flex-wrap gap-2">
+                        {sizeOptions.map((option) => {
+                          const isSelected = selectedSize === option.label;
+
+                          return (
+                            <button
+                              key={option.label}
+                              type="button"
+                              disabled={option.disabled}
+                              onClick={() => setSelectedSize(option.label)}
+                              aria-pressed={isSelected}
+                              className={`min-w-[3.25rem] rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-200 ${
+                                option.disabled
+                                  ? 'cursor-not-allowed border-border/60 bg-muted/40 text-muted-foreground opacity-50'
+                                  : isSelected
+                                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                                    : 'border-border bg-background hover:border-primary/50 hover:bg-primary/5'
+                              }`}
+                            >
+                              {option.label}
                             </button>
                           );
                         })}
@@ -945,7 +947,7 @@ const ProductDetailPage = () => {
           {relatedProducts.length > 0 && (
             <section className="mt-20">
               <h2 className="mb-6 text-2xl font-bold">You might also like</h2>
-              <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-0.5 md:grid-cols-4 lg:gap-6">
                 {relatedProducts.map((relatedProduct) => (
                   <Link key={relatedProduct.id} to={`/product/${relatedProduct.id}`} className="card-product block">
                     <div className="aspect-square overflow-hidden bg-muted">

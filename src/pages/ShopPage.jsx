@@ -287,7 +287,7 @@ const ShopPage = () => {
               </div>
 
               {loading ? (
-                <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:gap-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-0.5 lg:grid-cols-4 lg:gap-3">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
                     <div key={i} className="space-y-3">
                       <Skeleton className="w-full aspect-square rounded-xl" />
@@ -315,7 +315,7 @@ const ShopPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:gap-3 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-0.5 lg:grid-cols-4 lg:gap-3">
                     {products.map((product) => (
                       <Link key={product.id} to={`/product/${product.id}`} className="card-product block">
                         <div className="aspect-square bg-muted overflow-hidden">
