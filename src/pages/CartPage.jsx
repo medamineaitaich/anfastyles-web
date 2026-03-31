@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { readCartFromStorage, writeCartToStorage } from '@/lib/cart';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -17,33 +18,25 @@ const CartPage = () => {
   }, []);
 
   const loadCart = () => {
-    const savedCart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0,"itemCount":0}');
+    const savedCart = readCartFromStorage();
     setCart(savedCart);
   };
 
-  const updateQuantity = (productId, newQuantity) => {
+  const updateQuantity = (lineKey, newQuantity) => {
     if (newQuantity < 1) return;
     
     const updatedItems = cart.items.map(item =>
-      item.productId === productId ? { ...item, quantity: newQuantity } : item
+      item.lineKey === lineKey ? { ...item, quantity: newQuantity } : item
     );
     
-    const subtotal = updatedItems.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
-    const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-    
-    const updatedCart = { items: updatedItems, subtotal, itemCount };
-    localStorage.setItem('anfaCart', JSON.stringify(updatedCart));
+    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
     setCart(updatedCart);
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  const removeItem = (productId) => {
-    const updatedItems = cart.items.filter(item => item.productId !== productId);
-    const subtotal = updatedItems.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
-    const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-    
-    const updatedCart = { items: updatedItems, subtotal, itemCount };
-    localStorage.setItem('anfaCart', JSON.stringify(updatedCart));
+  const removeItem = (lineKey) => {
+    const updatedItems = cart.items.filter(item => item.lineKey !== lineKey);
+    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
     setCart(updatedCart);
     window.dispatchEvent(new Event('cartUpdated'));
   };
@@ -99,7 +92,7 @@ const CartPage = () => {
 
                 <div className="space-y-4">
                   {cart.items.map((item) => (
-                    <div key={`${item.productId}-${item.size}-${item.color}`} className="bg-card border border-border rounded-xl p-4 sm:p-6">
+                    <div key={item.lineKey} className="bg-card border border-border rounded-xl p-4 sm:p-6">
                       <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
                         <img
                           src={item.image}
@@ -117,7 +110,7 @@ const CartPage = () => {
                               variant="outline"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.lineKey, item.quantity - 1)}
                             >
                               <Minus className="w-3 h-3" />
                             </Button>
@@ -126,7 +119,7 @@ const CartPage = () => {
                               variant="outline"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.lineKey, item.quantity + 1)}
                             >
                               <Plus className="w-3 h-3" />
                             </Button>
@@ -140,7 +133,7 @@ const CartPage = () => {
                             variant="ghost"
                             size="sm"
                             className="text-destructive hover:text-destructive"
-                            onClick={() => removeItem(item.productId)}
+                            onClick={() => removeItem(item.lineKey)}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Remove

@@ -4,6 +4,7 @@ import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { readCartFromStorage, writeCartToStorage } from '@/lib/cart';
 
 const CartDrawer = ({ open, onClose }) => {
   const [cart, setCart] = useState({ items: [], subtotal: 0, itemCount: 0 });
@@ -15,33 +16,25 @@ const CartDrawer = ({ open, onClose }) => {
   }, [open]);
 
   const loadCart = () => {
-    const savedCart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0,"itemCount":0}');
+    const savedCart = readCartFromStorage();
     setCart(savedCart);
   };
 
-  const updateQuantity = (productId, newQuantity) => {
+  const updateQuantity = (lineKey, newQuantity) => {
     if (newQuantity < 1) return;
     
     const updatedItems = cart.items.map(item =>
-      item.productId === productId ? { ...item, quantity: newQuantity } : item
+      item.lineKey === lineKey ? { ...item, quantity: newQuantity } : item
     );
     
-    const subtotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-    
-    const updatedCart = { items: updatedItems, subtotal, itemCount };
-    localStorage.setItem('anfaCart', JSON.stringify(updatedCart));
+    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
     setCart(updatedCart);
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  const removeItem = (productId) => {
-    const updatedItems = cart.items.filter(item => item.productId !== productId);
-    const subtotal = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-    
-    const updatedCart = { items: updatedItems, subtotal, itemCount };
-    localStorage.setItem('anfaCart', JSON.stringify(updatedCart));
+  const removeItem = (lineKey) => {
+    const updatedItems = cart.items.filter(item => item.lineKey !== lineKey);
+    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
     setCart(updatedCart);
     window.dispatchEvent(new Event('cartUpdated'));
   };
@@ -69,7 +62,7 @@ const CartDrawer = ({ open, onClose }) => {
             <div className="flex-1 overflow-y-auto py-6">
               <div className="space-y-4">
                 {cart.items.map((item) => (
-                  <div key={item.productId} className="flex gap-4">
+                  <div key={item.lineKey} className="flex gap-4">
                     <img
                       src={item.image}
                       alt={item.name}
@@ -80,12 +73,18 @@ const CartDrawer = ({ open, onClose }) => {
                       <p className="text-sm text-muted-foreground font-variant-tabular">
                         ${item.price.toFixed(2)}
                       </p>
+                      {(item.color || item.size) && (
+                        <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                          {item.color && <p>Color: {item.color}</p>}
+                          {item.size && <p>Size: {item.size.toUpperCase()}</p>}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mt-2">
                         <Button
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.lineKey, item.quantity - 1)}
                         >
                           <Minus className="w-3 h-3" />
                         </Button>
@@ -94,7 +93,7 @@ const CartDrawer = ({ open, onClose }) => {
                           variant="outline"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                          onClick={() => updateQuantity(item.lineKey, item.quantity + 1)}
                         >
                           <Plus className="w-3 h-3" />
                         </Button>
@@ -108,7 +107,7 @@ const CartDrawer = ({ open, onClose }) => {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => removeItem(item.productId)}
+                        onClick={() => removeItem(item.lineKey)}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
+import { getCartLineKey, readCartFromStorage, writeCartToStorage } from '@/lib/cart';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -608,27 +609,31 @@ const ProductDetailPage = () => {
       return;
     }
 
-    const cart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0,"itemCount":0}');
-    const cartLineKey = selectedVariation?.id ? `variation-${selectedVariation.id}` : `product-${product.id}`;
+    const cart = readCartFromStorage();
+    const cartLineKey = getCartLineKey({
+      productId: product.id,
+      variationId: selectedVariation?.id || null,
+      size: selectedSize,
+      color: selectedColor,
+    });
     const itemPrice = parseFloat(displayPrice);
     const itemImage = images[selectedImage] || images[0] || 'https://images.unsplash.com/photo-1618815909724-861120595390';
 
-    const existingItemIndex = cart.items.findIndex((item) => {
-      const existingKey = item.variationId ? `variation-${item.variationId}` : `product-${item.productId}`;
-      return existingKey === cartLineKey;
-    });
+    const existingItemIndex = cart.items.findIndex((item) => item.lineKey === cartLineKey);
 
     if (existingItemIndex > -1) {
       const existingQuantity = Number(cart.items[existingItemIndex].quantity) || 0;
       const nextQuantity = Math.min(existingQuantity + quantity, maxQuantity);
       cart.items[existingItemIndex] = {
         ...cart.items[existingItemIndex],
+        lineKey: cartLineKey,
         quantity: nextQuantity,
         price: itemPrice,
         image: itemImage,
       };
     } else {
       cart.items.push({
+        lineKey: cartLineKey,
         productId: product.id,
         variationId: selectedVariation?.id || null,
         sku: selectedVariation?.sku || product?.sku || '',
@@ -641,10 +646,7 @@ const ProductDetailPage = () => {
       });
     }
 
-    cart.subtotal = cart.items.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
-    cart.itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-
-    localStorage.setItem('anfaCart', JSON.stringify(cart));
+    writeCartToStorage(cart);
     window.dispatchEvent(new Event('cartUpdated'));
     toast.success('Added to cart', {
       id: ADD_TO_CART_TOAST_ID,
