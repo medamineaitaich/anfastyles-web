@@ -1384,7 +1384,7 @@ const CheckoutPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-8 pb-28 overflow-x-hidden md:py-12 md:pb-12">
+      <main className="py-8 pb-28 overflow-x-hidden md:py-12 md:pb-12 lg:overflow-visible">
         <div className="container-custom max-w-5xl">
           <h1 className="text-4xl md:text-5xl font-bold mb-3 text-balance" style={{ letterSpacing: '-0.02em' }}>
             Checkout

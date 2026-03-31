@@ -62,7 +62,7 @@ const CartPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="py-10 md:py-12 overflow-x-hidden">
+      <main className="py-10 md:py-12 overflow-x-hidden lg:overflow-visible">
         <div className="container-custom">
           <h1 className="text-4xl md:text-5xl font-bold mb-8 text-balance" style={{ letterSpacing: '-0.02em' }}>
             Shopping cart
