@@ -4,9 +4,9 @@ import { useParams, Link } from 'react-router-dom';
 import { Minus, Plus, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
 import { getCartLineKey, readCartFromStorage, writeCartToStorage } from '@/lib/cart';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -377,6 +377,7 @@ const ProductDetailPage = () => {
   const [selectedColor, setSelectedColor] = useState('');
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [selectionErrorVisible, setSelectionErrorVisible] = useState(false);
 
   const formatPrice = (value) => {
     const n = Number(value);
@@ -404,11 +405,12 @@ const ProductDetailPage = () => {
       setSelectedImage(0);
       setSelectedSize('');
       setSelectedColor('');
+      setSelectionErrorVisible(false);
       setQuantity(1);
       fetchRelatedProducts(data);
     } catch (error) {
       console.error('Error fetching product:', error);
-      toast.error('Failed to load product');
+      notifyError('Unable to load this product', 'Please refresh the page or try another item.');
     } finally {
       setLoading(false);
     }
@@ -561,6 +563,12 @@ const ProductDetailPage = () => {
     if (selectedColorDisabled) setSelectedColor('');
   }, [selectedColorDisabled]);
 
+  useEffect(() => {
+    if (missingSelections.length === 0) {
+      setSelectionErrorVisible(false);
+    }
+  }, [missingSelections.length]);
+
   const displayPrice = selectedVariation?.price || product?.price;
   const displayRegularPrice = selectedVariation?.regularPrice || product?.regularPrice;
   const displaySalePrice = selectedVariation?.salePrice || product?.salePrice;
@@ -601,11 +609,18 @@ const ProductDetailPage = () => {
   const handleClearSelections = () => {
     setSelectedSize('');
     setSelectedColor('');
+    setSelectionErrorVisible(false);
   };
 
   const addToCart = () => {
     if (!product || !canAddToCart) {
-      toast.error(hasRealVariationData ? 'Please choose an available size and color first' : 'This product is currently unavailable');
+      setSelectionErrorVisible(Boolean(hasRealVariationData));
+      notifyError(
+        hasRealVariationData ? 'Choose your product options first' : 'Product unavailable',
+        hasRealVariationData
+          ? `Select ${missingSelectionLabel} before adding this item to your cart.`
+          : 'This product is currently unavailable.'
+      );
       return;
     }
 
@@ -648,7 +663,9 @@ const ProductDetailPage = () => {
 
     writeCartToStorage(cart);
     window.dispatchEvent(new Event('cartUpdated'));
-    toast.success('Added to cart', {
+    setSelectionErrorVisible(false);
+    notifySuccess('Added to cart', {
+      description: `${product.name} is ready in your cart.`,
       id: ADD_TO_CART_TOAST_ID,
       duration: 2200,
     });
@@ -809,8 +826,8 @@ const ProductDetailPage = () => {
                 <div className="space-y-5">
                   {colorOptions.length > 0 && (
                     <div>
-                      <label className="mb-2 block text-sm font-semibold">Color</label>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <label className={`mb-2 block text-sm font-semibold ${selectionErrorVisible && !selectedColor ? 'text-destructive' : ''}`}>Color</label>
+                      <div className={`grid grid-cols-2 gap-2 rounded-xl transition-colors sm:grid-cols-3 ${selectionErrorVisible && !selectedColor ? 'border border-destructive/40 bg-destructive/5 p-2' : ''}`}>
                         {colorOptions.map((option) => {
                           const isSelected = selectedColor === option.label;
 
@@ -819,7 +836,10 @@ const ProductDetailPage = () => {
                               key={option.label}
                               type="button"
                               disabled={option.disabled}
-                              onClick={() => setSelectedColor(option.label)}
+                              onClick={() => {
+                                setSelectedColor(option.label);
+                                setSelectionErrorVisible(false);
+                              }}
                               aria-pressed={isSelected}
                               className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition-all duration-200 ${
                                 option.disabled
@@ -845,8 +865,8 @@ const ProductDetailPage = () => {
 
                   {sizeOptions.length > 0 && (
                     <div>
-                      <label className="mb-2 block text-sm font-semibold">Size</label>
-                      <div className="flex flex-wrap gap-2">
+                      <label className={`mb-2 block text-sm font-semibold ${selectionErrorVisible && !selectedSize ? 'text-destructive' : ''}`}>Size</label>
+                      <div className={`flex flex-wrap gap-2 rounded-xl transition-colors ${selectionErrorVisible && !selectedSize ? 'border border-destructive/40 bg-destructive/5 p-2' : ''}`}>
                         {sizeOptions.map((option) => {
                           const isSelected = selectedSize === option.label;
 
@@ -855,7 +875,10 @@ const ProductDetailPage = () => {
                               key={option.label}
                               type="button"
                               disabled={option.disabled}
-                              onClick={() => setSelectedSize(option.label)}
+                              onClick={() => {
+                                setSelectedSize(option.label);
+                                setSelectionErrorVisible(false);
+                              }}
                               aria-pressed={isSelected}
                               className={`min-w-[3.25rem] rounded-xl border px-3 py-2 text-sm font-semibold transition-all duration-200 ${
                                 option.disabled
@@ -871,6 +894,12 @@ const ProductDetailPage = () => {
                         })}
                       </div>
                     </div>
+                  )}
+
+                  {selectionErrorVisible && missingSelections.length > 0 && (
+                    <p className="text-sm text-destructive">
+                      Select {missingSelectionLabel} to continue.
+                    </p>
                   )}
 
                   <div>

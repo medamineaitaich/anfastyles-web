@@ -5,6 +5,7 @@ import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { readCartFromStorage, writeCartToStorage } from '@/lib/cart';
+import { notifyInfo } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -35,10 +36,15 @@ const CartPage = () => {
   };
 
   const removeItem = (lineKey) => {
+    const removedItem = cart.items.find((item) => item.lineKey === lineKey);
     const updatedItems = cart.items.filter(item => item.lineKey !== lineKey);
     const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
     setCart(updatedCart);
     window.dispatchEvent(new Event('cartUpdated'));
+
+    if (removedItem) {
+      notifyInfo('Item removed', `${removedItem.name} was removed from your cart.`);
+    }
   };
 
   const shippingCost = cart.subtotal >= 75 ? 0 : 10;

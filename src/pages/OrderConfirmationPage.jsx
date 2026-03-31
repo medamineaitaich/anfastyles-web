@@ -1,25 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { CheckCircle, Package, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { generateInvoice } from '@/components/InvoiceGenerator.jsx';
+import { normalizeOrderSummary, readStoredOrderSummary, storeOrderSummary } from '@/lib/orderSummary.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
 const OrderConfirmationPage = () => {
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
   const orderNumber = searchParams.get('orderNumber');
+  const initialOrderSource = location.state?.orderSummary || readStoredOrderSummary({ orderId, orderNumber });
+  const initialOrderSummary = initialOrderSource
+    ? normalizeOrderSummary(initialOrderSource, { orderId, orderNumber })
+    : null;
 
-  const [orderData, setOrderData] = useState(null);
+  const [orderData, setOrderData] = useState(initialOrderSummary);
   const { authenticated } = useAuth();
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    if (orderData) {
+      storeOrderSummary(orderData);
+    }
+  }, [orderData]);
 
   useEffect(() => {
     if (orderId && authenticated) {
@@ -32,7 +44,8 @@ const OrderConfirmationPage = () => {
       const response = await apiServerClient.fetch(`/orders/${orderId}`);
       if (response.ok) {
         const data = await response.json();
-        setOrderData(data);
+        const normalized = normalizeOrderSummary(data, orderData || { orderId, orderNumber });
+        setOrderData(normalized);
       }
     } catch (error) {
       console.error('Failed to fetch order details for invoice:', error);
@@ -40,23 +53,14 @@ const OrderConfirmationPage = () => {
   };
 
   const handleDownloadInvoice = async () => {
-    if (!orderData && !orderNumber) {
+    if (!orderData) {
       toast.error('Order details not available yet. Please try again in a moment.');
       return;
     }
 
     setDownloading(true);
     try {
-      const dataToUse = orderData || {
-        orderNumber: orderNumber || 'ANF-2026-001',
-        date: new Date().toISOString(),
-        status: 'processing',
-        items: [],
-        subtotal: 0,
-        total: 0
-      };
-
-      await generateInvoice(dataToUse);
+      await generateInvoice(orderData);
       toast.success('Invoice downloaded successfully');
     } catch (error) {
       toast.error('Failed to generate invoice');
@@ -100,7 +104,7 @@ const OrderConfirmationPage = () => {
             <div className="grid gap-4 text-sm md:grid-cols-2">
               <div>
                 <p className="mb-1 text-muted-foreground">Order number</p>
-                <p className="font-semibold">{orderNumber || 'ANF-2026-001'}</p>
+                <p className="font-semibold">{orderData?.orderNumber || orderNumber || 'Unavailable'}</p>
               </div>
               <div>
                 <p className="mb-1 text-muted-foreground">Estimated delivery</p>

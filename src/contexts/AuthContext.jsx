@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiServerClient from '@/lib/apiServerClient';
+import { claimPendingCheckoutProfile } from '@/lib/checkoutProfile.js';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +16,17 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+
+  const applyAuthenticatedUser = (nextUser) => {
+    setAuthenticated(true);
+    setUser(nextUser);
+
+    try {
+      claimPendingCheckoutProfile(nextUser);
+    } catch (error) {
+      console.warn('Failed to sync pending checkout profile:', error);
+    }
+  };
 
   useEffect(() => {
     verifySession();
@@ -32,8 +44,7 @@ export const AuthProvider = ({ children }) => {
       
       const data = await response.json();
       if (data.authenticated) {
-        setAuthenticated(true);
-        setUser({
+        applyAuthenticatedUser({
           userId: data.userId,
           email: data.email,
           name: data.name
@@ -64,8 +75,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const data = await response.json();
-    setAuthenticated(true);
-    setUser({
+    applyAuthenticatedUser({
       userId: data.userId,
       email: data.email,
       name: data.name
@@ -87,8 +97,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const data = await response.json();
-    setAuthenticated(true);
-    setUser({
+    applyAuthenticatedUser({
       userId: data.userId,
       email: data.email,
       name: data.name

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Leaf, Mail } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -11,14 +13,14 @@ const Footer = () => {
 
   const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
-    if (!email) {
-      toast.error('Please enter your email');
+    if (!isValidEmail(email)) {
+      notifyError('Enter a valid email address', 'We need a valid email to subscribe you to updates.');
       return;
     }
 
     setLoading(true);
     setTimeout(() => {
-      toast.success('Welcome to the Soil Community');
+      notifySuccess('Welcome to the Soil Community', 'You are subscribed to updates from AnfaStyles.');
       setEmail('');
       setLoading(false);
     }, 1000);
@@ -69,6 +71,8 @@ const Footer = () => {
                 placeholder="Your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                aria-invalid={Boolean(email) && !isValidEmail(email)}
                 className="bg-background text-foreground"
               />
               <Button type="submit" disabled={loading} className="w-full">

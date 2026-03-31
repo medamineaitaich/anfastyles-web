@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
+import { notifyError } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -115,7 +115,7 @@ const ShopPage = () => {
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      toast.error('Failed to load products');
+      notifyError('Unable to load shop results', 'Please try again in a moment.');
     } finally {
       setLoading(false);
     }

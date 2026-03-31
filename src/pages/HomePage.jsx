@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 import ProductRatingStars from '@/components/ProductRatingStars.jsx';
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 
 const HomePage = () => {
   const [homeProducts, setHomeProducts] = useState([]);
@@ -114,7 +116,7 @@ const HomePage = () => {
       setHomeProducts(pickMixedProducts(products, 12));
     } catch (error) {
       console.error('Error fetching home products:', error);
-      toast.error('Failed to load products');
+      notifyError('Unable to load featured products', 'Please refresh the page and try again.');
     } finally {
       setLoading(false);
     }
@@ -122,11 +124,11 @@ const HomePage = () => {
 
   const handleNewsletterSubmit = (e) => {
     e.preventDefault();
-    if (!email) {
-      toast.error('Please enter your email');
+    if (!isValidEmail(email)) {
+      notifyError('Enter a valid email address', 'We need a valid email to subscribe you to updates.');
       return;
     }
-    toast.success('Welcome to the Soil Community');
+    notifySuccess('Welcome to the Soil Community', 'You are subscribed to updates from AnfaStyles.');
     setEmail('');
   };
 
@@ -371,6 +373,8 @@ const HomePage = () => {
                 placeholder="Your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                aria-invalid={Boolean(email) && !isValidEmail(email)}
                 className="bg-white text-foreground flex-1"
               />
               <Button type="submit" variant="secondary">

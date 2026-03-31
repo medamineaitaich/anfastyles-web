@@ -11,8 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
+import { readCheckoutProfile, saveCheckoutProfile } from '@/lib/checkoutProfile.js';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
+import { normalizeOrderSummary, storeOrderSummary } from '@/lib/orderSummary.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -193,13 +196,42 @@ const createAddressFormState = (overrides = {}) => ({
   ...overrides,
 });
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+
+const splitFullName = (value) => {
+  const parts = String(value || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+  };
+};
+
+const mergeAddressFormValues = (currentValues, nextValues = {}) => {
+  const merged = { ...currentValues };
+
+  Object.entries(nextValues).forEach(([field, value]) => {
+    const normalizedValue = field === 'country'
+      ? String(value || '').trim().toUpperCase()
+      : String(value || '').trim();
+
+    if (!normalizedValue) return;
+    if (String(currentValues?.[field] || '').trim()) return;
+
+    merged[field] = normalizedValue;
+  });
+
+  return merged;
+};
+
 const getAddressErrorKey = (formKey, field) => `${formKey}.${field}`;
+const getAccountErrorKey = (field) => `account.${field}`;
 
 const AddressFields = ({
   formKey,
   values,
   errors,
   onFieldChange,
+  onFieldBlur,
   onCountryChange,
   includeEmail,
 }) => (
@@ -210,7 +242,10 @@ const AddressFields = ({
         id={`${formKey}-firstName`}
         value={values.firstName}
         onChange={(event) => onFieldChange('firstName', event.target.value)}
-        className={errors[getAddressErrorKey(formKey, 'firstName')] ? 'border-destructive' : ''}
+        onBlur={() => onFieldBlur('firstName')}
+        autoComplete={formKey === 'billing' ? 'given-name' : 'shipping given-name'}
+        required
+        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'firstName')])}
       />
       {errors[getAddressErrorKey(formKey, 'firstName')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'firstName')]}</p>}
     </div>
@@ -221,7 +256,10 @@ const AddressFields = ({
         id={`${formKey}-lastName`}
         value={values.lastName}
         onChange={(event) => onFieldChange('lastName', event.target.value)}
-        className={errors[getAddressErrorKey(formKey, 'lastName')] ? 'border-destructive' : ''}
+        onBlur={() => onFieldBlur('lastName')}
+        autoComplete={formKey === 'billing' ? 'family-name' : 'shipping family-name'}
+        required
+        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'lastName')])}
       />
       {errors[getAddressErrorKey(formKey, 'lastName')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'lastName')]}</p>}
     </div>
@@ -234,7 +272,10 @@ const AddressFields = ({
           type="email"
           value={values.email}
           onChange={(event) => onFieldChange('email', event.target.value)}
-          className={errors[getAddressErrorKey(formKey, 'email')] ? 'border-destructive' : ''}
+          onBlur={() => onFieldBlur('email')}
+          autoComplete="email"
+          required
+          aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'email')])}
         />
         {errors[getAddressErrorKey(formKey, 'email')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'email')]}</p>}
       </div>
@@ -247,6 +288,7 @@ const AddressFields = ({
         type="tel"
         value={values.phone}
         onChange={(event) => onFieldChange('phone', event.target.value)}
+        autoComplete={formKey === 'billing' ? 'tel' : 'shipping tel'}
       />
     </div>
 
@@ -256,7 +298,10 @@ const AddressFields = ({
         id={`${formKey}-address`}
         value={values.address}
         onChange={(event) => onFieldChange('address', event.target.value)}
-        className={errors[getAddressErrorKey(formKey, 'address')] ? 'border-destructive' : ''}
+        onBlur={() => onFieldBlur('address')}
+        autoComplete={formKey === 'billing' ? 'address-line1' : 'shipping address-line1'}
+        required
+        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'address')])}
       />
       {errors[getAddressErrorKey(formKey, 'address')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'address')]}</p>}
     </div>
@@ -267,7 +312,10 @@ const AddressFields = ({
         id={`${formKey}-city`}
         value={values.city}
         onChange={(event) => onFieldChange('city', event.target.value)}
-        className={errors[getAddressErrorKey(formKey, 'city')] ? 'border-destructive' : ''}
+        onBlur={() => onFieldBlur('city')}
+        autoComplete={formKey === 'billing' ? 'address-level2' : 'shipping address-level2'}
+        required
+        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'city')])}
       />
       {errors[getAddressErrorKey(formKey, 'city')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'city')]}</p>}
     </div>
@@ -278,7 +326,10 @@ const AddressFields = ({
         id={`${formKey}-state`}
         value={values.state}
         onChange={(event) => onFieldChange('state', event.target.value)}
-        className={errors[getAddressErrorKey(formKey, 'state')] ? 'border-destructive' : ''}
+        onBlur={() => onFieldBlur('state')}
+        autoComplete={formKey === 'billing' ? 'address-level1' : 'shipping address-level1'}
+        required
+        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'state')])}
       />
       {errors[getAddressErrorKey(formKey, 'state')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'state')]}</p>}
     </div>
@@ -289,7 +340,10 @@ const AddressFields = ({
         id={`${formKey}-zip`}
         value={values.zip}
         onChange={(event) => onFieldChange('zip', event.target.value)}
-        className={errors[getAddressErrorKey(formKey, 'zip')] ? 'border-destructive' : ''}
+        onBlur={() => onFieldBlur('zip')}
+        autoComplete={formKey === 'billing' ? 'postal-code' : 'shipping postal-code'}
+        required
+        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'zip')])}
       />
       {errors[getAddressErrorKey(formKey, 'zip')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'zip')]}</p>}
     </div>
@@ -341,6 +395,7 @@ const normalizePaymentMethods = (methods) => {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
+  const { user, authenticated, verifySession } = useAuth();
   const [cart, setCart] = useState({ items: [], subtotal: 0 });
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -355,6 +410,10 @@ const CheckoutPage = () => {
   const [billingData, setBillingData] = useState(() => createAddressFormState());
   const [shippingData, setShippingData] = useState(() => createAddressFormState());
   const [shippingSameAsBilling, setShippingSameAsBilling] = useState(true);
+  const [createAccount, setCreateAccount] = useState(false);
+  const [accountPassword, setAccountPassword] = useState('');
+  const [accountConfirmPassword, setAccountConfirmPassword] = useState('');
+  const [profilePrefillKey, setProfilePrefillKey] = useState('');
   const [formData, setFormData] = useState({
     shippingMethod: 'standard',
     paymentMethod: 'stripe'
@@ -394,6 +453,45 @@ const CheckoutPage = () => {
     }
     setCart(savedCart);
   }, [navigate]);
+
+  useEffect(() => {
+    if (!authenticated || !user) return;
+
+    const nextPrefillKey = String(user.userId || user.email || '');
+    if (!nextPrefillKey || profilePrefillKey === nextPrefillKey) return;
+
+    let savedProfile = null;
+    try {
+      savedProfile = readCheckoutProfile({ userId: user.userId, email: user.email });
+    } catch (error) {
+      console.warn('Failed to read checkout profile:', error);
+    }
+
+    const nameParts = splitFullName(user.name);
+    const billingDefaults = {
+      firstName: savedProfile?.billing?.firstName || nameParts.firstName,
+      lastName: savedProfile?.billing?.lastName || nameParts.lastName,
+      email: savedProfile?.billing?.email || user.email || '',
+      phone: savedProfile?.billing?.phone || '',
+      address: savedProfile?.billing?.address || '',
+      city: savedProfile?.billing?.city || '',
+      state: savedProfile?.billing?.state || '',
+      zip: savedProfile?.billing?.zip || '',
+      country: savedProfile?.billing?.country || 'US',
+    };
+
+    setBillingData((prev) => mergeAddressFormValues(prev, billingDefaults));
+
+    if (savedProfile?.shipping) {
+      setShippingData((prev) => mergeAddressFormValues(prev, savedProfile.shipping));
+    }
+
+    if (typeof savedProfile?.shippingSameAsBilling === 'boolean') {
+      setShippingSameAsBilling(savedProfile.shippingSameAsBilling);
+    }
+
+    setProfilePrefillKey(nextPrefillKey);
+  }, [authenticated, profilePrefillKey, user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -554,11 +652,135 @@ const CheckoutPage = () => {
         return next;
       });
     }
+
+    if (formKey === 'billing' && field === 'email' && errors[getAccountErrorKey('email')]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[getAccountErrorKey('email')];
+        delete next[getAccountErrorKey('general')];
+        return next;
+      });
+    }
   };
 
   const handleAddressCountryChange = (formKey, value) => {
     const setter = formKey === 'billing' ? setBillingData : setShippingData;
     setter((prev) => ({ ...prev, country: value }));
+  };
+
+  const validateAddressField = (formKey, field, value) => {
+    const trimmedValue = String(value || '').trim();
+
+    if (!trimmedValue) {
+      return `${getValidationLabel(field)} is required`;
+    }
+
+    if (field === 'email' && !isValidEmail(trimmedValue)) {
+      return 'Enter a valid email address';
+    }
+
+    return '';
+  };
+
+  const handleAddressFieldBlur = (formKey, field) => {
+    const values = formKey === 'billing' ? billingData : shippingData;
+    const nextMessage = validateAddressField(formKey, field, values[field]);
+    const errorKey = getAddressErrorKey(formKey, field);
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (nextMessage) {
+        next[errorKey] = nextMessage;
+      } else {
+        delete next[errorKey];
+      }
+      return next;
+    });
+  };
+
+  const clearAccountErrors = () => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (key.startsWith('account.')) delete next[key];
+      });
+      return next;
+    });
+  };
+
+  const handleAccountToggle = (checked) => {
+    const nextChecked = checked !== false;
+    setCreateAccount(nextChecked);
+
+    if (!nextChecked) {
+      clearAccountErrors();
+    }
+  };
+
+  const handleAccountFieldChange = (field, value) => {
+    if (field === 'password') {
+      setAccountPassword(value);
+    } else {
+      setAccountConfirmPassword(value);
+    }
+
+    const errorKey = getAccountErrorKey(field);
+    if (errors[errorKey]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[errorKey];
+        return next;
+      });
+    }
+
+    if (field === 'password' && errors[getAccountErrorKey('confirmPassword')]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[getAccountErrorKey('confirmPassword')];
+        delete next[getAccountErrorKey('general')];
+        return next;
+      });
+    } else if (errors[getAccountErrorKey('general')]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[getAccountErrorKey('general')];
+        return next;
+      });
+    }
+  };
+
+  const validateAccountField = (field, value) => {
+    const trimmedValue = String(value || '').trim();
+
+    if (!trimmedValue) {
+      return field === 'confirmPassword' ? 'Confirm password is required' : 'Password is required';
+    }
+
+    if (field === 'password' && trimmedValue.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+
+    if (field === 'confirmPassword' && accountPassword && trimmedValue !== accountPassword) {
+      return 'Passwords do not match';
+    }
+
+    return '';
+  };
+
+  const handleAccountFieldBlur = (field) => {
+    const value = field === 'password' ? accountPassword : accountConfirmPassword;
+    const nextMessage = validateAccountField(field, value);
+    const errorKey = getAccountErrorKey(field);
+
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (nextMessage) {
+        next[errorKey] = nextMessage;
+      } else {
+        delete next[errorKey];
+      }
+      return next;
+    });
   };
 
   const getValidationLabel = (field) => {
@@ -572,8 +794,9 @@ const CheckoutPage = () => {
     const nextErrors = {};
 
     requiredFields.forEach((field) => {
-      if (!String(values[field] || '').trim()) {
-        nextErrors[getAddressErrorKey(formKey, field)] = `${getValidationLabel(field)} is required`;
+      const message = validateAddressField(formKey, field, values[field]);
+      if (message) {
+        nextErrors[getAddressErrorKey(formKey, field)] = message;
       }
     });
 
@@ -595,18 +818,32 @@ const CheckoutPage = () => {
       ...(shippingSameAsBilling ? {} : getAddressValidationErrors('shipping', shippingData, ['firstName', 'lastName', 'address', 'city', 'state', 'zip'])),
     };
 
+    if (!authenticated && createAccount) {
+      if (!accountPassword) {
+        newErrors[getAccountErrorKey('password')] = 'Password is required';
+      } else if (accountPassword.length < 8) {
+        newErrors[getAccountErrorKey('password')] = 'Password must be at least 8 characters';
+      }
+
+      if (!accountConfirmPassword) {
+        newErrors[getAccountErrorKey('confirmPassword')] = 'Confirm password is required';
+      } else if (accountPassword !== accountConfirmPassword) {
+        newErrors[getAccountErrorKey('confirmPassword')] = 'Passwords do not match';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handlePlaceOrder = async ({ stripe, elements } = {}) => {
     if (!validateCheckoutForm()) {
-      toast.error('Please fill in all required fields');
+      notifyError('Please check the highlighted fields', 'Complete the required checkout details before placing your order.');
       return;
     }
 
     if (!formData.paymentMethod || !SUPPORTED_PAYMENT_METHODS.includes(formData.paymentMethod)) {
-      toast.error(paymentMethodsError || 'No supported payment method is currently available.');
+      notifyError('Payment unavailable', paymentMethodsError || 'No supported payment method is currently available.');
       return;
     }
 
@@ -614,6 +851,8 @@ const CheckoutPage = () => {
     try {
       let paymentData = null;
       let paymentMethodGateway = formData.paymentMethod;
+      let checkoutUser = authenticated ? user : null;
+      const createAccountDuringCheckout = !authenticated && createAccount;
       const storeFetch = async (path, { method = 'GET', body, store } = {}) => {
         const headers = { 'Content-Type': 'application/json' };
         if (store?.nonce) headers['x-store-nonce'] = store.nonce;
@@ -695,6 +934,97 @@ const CheckoutPage = () => {
         phone: shippingFormValues.phone || '',
       };
 
+      const createCheckoutAccountIfNeeded = async () => {
+        if (!createAccountDuringCheckout) return null;
+
+        clearAccountErrors();
+
+        const response = await apiServerClient.fetch('/auth/register-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            billing_address,
+            shipping_address,
+            password: accountPassword,
+            confirmPassword: accountConfirmPassword,
+          }),
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const message = data?.error || data?.message || 'Failed to create your account during checkout';
+          const nextErrors = {};
+
+          if (/at least 8/i.test(message)) {
+            nextErrors[getAccountErrorKey('password')] = message;
+          } else if (/match/i.test(message)) {
+            nextErrors[getAccountErrorKey('confirmPassword')] = message;
+          } else if (/already exists/i.test(message)) {
+            nextErrors[getAccountErrorKey('email')] = message;
+          } else {
+            nextErrors[getAccountErrorKey('general')] = message;
+          }
+
+          setErrors((prev) => ({ ...prev, ...nextErrors }));
+          throw new Error(message);
+        }
+
+        checkoutUser = {
+          userId: data?.userId || data?.customerId,
+          email: data?.email || billing_address.email,
+          name: data?.name || `${billingData.firstName} ${billingData.lastName}`.trim(),
+        };
+
+        setAccountPassword('');
+        setAccountConfirmPassword('');
+
+        try {
+          await verifySession();
+        } catch (sessionError) {
+          console.warn('Checkout account session refresh failed:', sessionError);
+        }
+
+        notifySuccess('Account created', 'Your new account is ready and linked to this checkout.');
+        return data;
+      };
+
+      const syncCheckoutProfileState = () => {
+        try {
+          saveCheckoutProfile({
+            userId: checkoutUser?.userId,
+            email: checkoutUser?.email || billing_address.email,
+            billingAddress: billing_address,
+            shippingAddress: shippingSameAsBilling ? billing_address : shipping_address,
+            shippingSameAsBilling,
+          });
+
+          if (authenticated && !createAccountDuringCheckout) {
+            notifySuccess('Addresses updated', 'Your saved account addresses were refreshed for future checkouts.');
+          }
+        } catch (syncError) {
+          console.error('Checkout profile sync error:', syncError);
+
+          if (authenticated && !createAccountDuringCheckout) {
+            notifyError('Order placed, but profile sync failed', 'Your order went through, but we could not save these addresses to your account.');
+          }
+        }
+      };
+
+      const completeSuccessfulCheckout = (orderSummary) => {
+        syncCheckoutProfileState();
+        storeOrderSummary(orderSummary);
+
+        localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
+        window.dispatchEvent(new Event('cartUpdated'));
+
+        navigate(`/order-confirmation?orderId=${orderSummary.orderId}&orderNumber=${orderSummary.orderNumber}`, {
+          state: { orderSummary },
+        });
+      };
+
+      await createCheckoutAccountIfNeeded();
+
       const buildStoreCheckoutSession = async () => {
         let storeSession = (await storeFetch('/cart'))?.store;
 
@@ -746,17 +1076,21 @@ const CheckoutPage = () => {
           needsShipping,
         };
       };
-      const finalizeStoreCheckout = async (checkoutRes) => {
+      const finalizeStoreCheckout = async (checkoutRes, fallbackOrderSummary) => {
         const checkoutData = checkoutRes?.data;
         const paymentStatus = checkoutData?.payment_result?.payment_status;
         if (paymentStatus !== 'success') {
           throw new Error(extractCheckoutErrorMessage(checkoutData));
         }
 
-        localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
-        window.dispatchEvent(new Event('cartUpdated'));
+        const orderSummary = normalizeOrderSummary({
+          orderId: checkoutData.order_id,
+          orderNumber: checkoutData.order_number || checkoutData.order_id,
+          status: checkoutData.status || 'processing',
+          date: checkoutData.date_created || new Date().toISOString(),
+        }, fallbackOrderSummary);
 
-        navigate(`/order-confirmation?orderId=${checkoutData.order_id}&orderNumber=${checkoutData.order_number || checkoutData.order_id}`);
+        completeSuccessfulCheckout(orderSummary);
       };
 
       const createCheckoutBody = (paymentMethod, paymentDataEntries, needsShipping = false) => ({
@@ -824,7 +1158,16 @@ const CheckoutPage = () => {
             { key: 'wc-stripe-is-deferred-intent', value: true },
           ], needsShipping),
         });
-        await finalizeStoreCheckout(checkoutRes);
+        await finalizeStoreCheckout(checkoutRes, {
+          items: cart.items,
+          billing: billing_address,
+          shipping: needsShipping ? shipping_address : billing_address,
+          subtotal,
+          shippingTotal: shippingCost,
+          taxTotal: tax,
+          total,
+          paymentMethod: paymentMethodGateway,
+        });
         return;
       }
 
@@ -838,7 +1181,16 @@ const CheckoutPage = () => {
           ], needsShipping),
         });
 
-        await finalizeStoreCheckout(checkoutRes);
+        await finalizeStoreCheckout(checkoutRes, {
+          items: cart.items,
+          billing: billing_address,
+          shipping: needsShipping ? shipping_address : billing_address,
+          subtotal,
+          shippingTotal: shippingCost,
+          taxTotal: tax,
+          total,
+          paymentMethod: paymentMethodGateway,
+        });
         return;
       }
 
@@ -895,7 +1247,16 @@ const CheckoutPage = () => {
           ], needsShipping),
         });
 
-        await finalizeStoreCheckout(checkoutRes);
+        await finalizeStoreCheckout(checkoutRes, {
+          items: cart.items,
+          billing: billing_address,
+          shipping: needsShipping ? shipping_address : billing_address,
+          subtotal,
+          shippingTotal: shippingCost,
+          taxTotal: tax,
+          total,
+          paymentMethod: paymentMethodGateway,
+        });
         return;
       }
 
@@ -940,14 +1301,21 @@ const CheckoutPage = () => {
       }
 
       const data = await response.json();
-      
-      localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
-      window.dispatchEvent(new Event('cartUpdated'));
-      
-      navigate(`/order-confirmation?orderId=${data.orderId}&orderNumber=${data.orderNumber}`);
+      const orderSummary = normalizeOrderSummary(data, {
+        items: cart.items,
+        billing: billing_address,
+        shipping: shipping_address,
+        subtotal,
+        shippingTotal: shippingCost,
+        taxTotal: tax,
+        total,
+        paymentMethod: paymentMethodGateway,
+      });
+
+      completeSuccessfulCheckout(orderSummary);
     } catch (error) {
       console.error('Order creation error:', error);
-      toast.error(error.message || 'Failed to place order');
+      notifyError('Checkout failed', error.message || 'Failed to place order');
     } finally {
       setLoading(false);
     }
@@ -1040,9 +1408,80 @@ const CheckoutPage = () => {
                     values={billingData}
                     errors={errors}
                     onFieldChange={(field, value) => handleAddressFieldChange('billing', field, value)}
+                    onFieldBlur={(field) => handleAddressFieldBlur('billing', field)}
                     onCountryChange={(value) => handleAddressCountryChange('billing', value)}
                     includeEmail
                   />
+
+                  {!authenticated && (
+                    <div className="mt-5 rounded-xl border border-border/60 bg-background/40 px-4 py-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="createAccount"
+                          checked={createAccount}
+                          onCheckedChange={handleAccountToggle}
+                        />
+                        <div className="flex-1 space-y-1">
+                          <Label htmlFor="createAccount" className="cursor-pointer font-semibold">
+                            Create an account
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Save your details for faster checkout next time.
+                          </p>
+                        </div>
+                      </div>
+
+                      {createAccount && (
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          <div>
+                            <Label htmlFor="checkout-password">Password *</Label>
+                            <Input
+                              id="checkout-password"
+                              type="password"
+                              value={accountPassword}
+                              onChange={(event) => handleAccountFieldChange('password', event.target.value)}
+                              onBlur={() => handleAccountFieldBlur('password')}
+                              autoComplete="new-password"
+                              required
+                              aria-invalid={Boolean(errors[getAccountErrorKey('password')])}
+                            />
+                            {errors[getAccountErrorKey('password')] && (
+                              <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('password')]}</p>
+                            )}
+                          </div>
+
+                          <div>
+                            <Label htmlFor="checkout-confirm-password">Confirm password *</Label>
+                            <Input
+                              id="checkout-confirm-password"
+                              type="password"
+                              value={accountConfirmPassword}
+                              onChange={(event) => handleAccountFieldChange('confirmPassword', event.target.value)}
+                              onBlur={() => handleAccountFieldBlur('confirmPassword')}
+                              autoComplete="new-password"
+                              required
+                              aria-invalid={Boolean(errors[getAccountErrorKey('confirmPassword')])}
+                            />
+                            {errors[getAccountErrorKey('confirmPassword')] && (
+                              <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('confirmPassword')]}</p>
+                            )}
+                          </div>
+
+                          {errors[getAccountErrorKey('email')] && (
+                            <div className="md:col-span-2">
+                              <p className="text-sm text-destructive">{errors[getAccountErrorKey('email')]}</p>
+                            </div>
+                          )}
+
+                          {errors[getAccountErrorKey('general')] && (
+                            <div className="md:col-span-2">
+                              <p className="text-sm text-destructive">{errors[getAccountErrorKey('general')]}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="mt-5 flex items-start gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3">
                     <Checkbox
@@ -1110,6 +1549,7 @@ const CheckoutPage = () => {
                     values={shippingData}
                     errors={errors}
                     onFieldChange={(field, value) => handleAddressFieldChange('shipping', field, value)}
+                    onFieldBlur={(field) => handleAddressFieldBlur('shipping', field)}
                     onCountryChange={(value) => handleAddressCountryChange('shipping', value)}
                     includeEmail={false}
                   />

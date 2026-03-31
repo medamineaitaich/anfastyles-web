@@ -5,11 +5,13 @@ import { Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
+
+const isValidEmail = (value) => /\S+@\S+\.\S+/.test(String(value || '').trim());
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -22,28 +24,67 @@ const SignupPage = () => {
   const [errors, setErrors] = useState({});
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
+  const validateField = (field, value) => {
+    if (field === 'name') {
+      if (!String(value || '').trim()) return 'Name is required';
+      return '';
+    }
+
+    if (field === 'email') {
+      if (!String(value || '').trim()) return 'Email is required';
+      if (!isValidEmail(value)) return 'Enter a valid email address';
+      return '';
+    }
+
+    if (field === 'password') {
+      if (!value) return 'Password is required';
+      if (String(value).length < 8) return 'Password must be at least 8 characters';
+      return '';
+    }
+
+    if (field === 'confirmPassword') {
+      if (!value) return 'Confirm password is required';
+      if (value !== password) return 'Passwords do not match';
+      return '';
+    }
+
+    return '';
+  };
+
+  const handleFieldBlur = (field, value) => {
+    const message = validateField(field, value);
+    if (!message) return;
+
+    setErrors((prev) => ({ ...prev, [field]: message }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
-    if (!name.trim()) newErrors.name = 'Name is required';
-    if (!email.trim()) newErrors.email = 'Email is required';
-    if (!password) newErrors.password = 'Password is required';
-    if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    const nameError = validateField('name', name);
+    const emailError = validateField('email', email);
+    const passwordError = validateField('password', password);
+    const confirmPasswordError = validateField('confirmPassword', confirmPassword);
+
+    if (nameError) newErrors.name = nameError;
+    if (emailError) newErrors.email = emailError;
+    if (passwordError) newErrors.password = passwordError;
+    if (confirmPasswordError) newErrors.confirmPassword = confirmPasswordError;
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      notifyError('Please check the highlighted fields', 'Complete the required account details to continue.');
       return;
     }
 
     setLoading(true);
     try {
       await register(name, email, password);
-      toast.success('Account created successfully');
+      notifySuccess('Account created successfully', 'Your account is ready to use.');
       navigate('/account');
     } catch (error) {
-      toast.error(error.message || 'Registration failed');
+      notifyError('Registration failed', error.message || 'Please review your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -75,11 +116,14 @@ const SignupPage = () => {
               <Input
                 id="name"
                 value={name}
+                required
+                autoComplete="name"
+                aria-invalid={Boolean(errors.name)}
                 onChange={(e) => {
                   setName(e.target.value);
                   setErrors(prev => ({ ...prev, name: '' }));
                 }}
-                className={errors.name ? 'border-destructive' : ''}
+                onBlur={() => handleFieldBlur('name', name)}
               />
               {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
             </div>
@@ -90,11 +134,14 @@ const SignupPage = () => {
                 id="email"
                 type="email"
                 value={email}
+                required
+                autoComplete="email"
+                aria-invalid={Boolean(errors.email)}
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setErrors(prev => ({ ...prev, email: '' }));
                 }}
-                className={errors.email ? 'border-destructive' : ''}
+                onBlur={() => handleFieldBlur('email', email)}
               />
               {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
             </div>
@@ -105,11 +152,14 @@ const SignupPage = () => {
                 id="password"
                 type="password"
                 value={password}
+                required
+                autoComplete="new-password"
+                aria-invalid={Boolean(errors.password)}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setErrors(prev => ({ ...prev, password: '' }));
                 }}
-                className={errors.password ? 'border-destructive' : ''}
+                onBlur={() => handleFieldBlur('password', password)}
               />
               {errors.password && <p className="text-sm text-destructive mt-1">{errors.password}</p>}
             </div>
@@ -120,11 +170,14 @@ const SignupPage = () => {
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
+                required
+                autoComplete="new-password"
+                aria-invalid={Boolean(errors.confirmPassword)}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value);
                   setErrors(prev => ({ ...prev, confirmPassword: '' }));
                 }}
-                className={errors.confirmPassword ? 'border-destructive' : ''}
+                onBlur={() => handleFieldBlur('confirmPassword', confirmPassword)}
               />
               {errors.confirmPassword && <p className="text-sm text-destructive mt-1">{errors.confirmPassword}</p>}
             </div>

@@ -1,8 +1,14 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { normalizeOrderSummary } from '@/lib/orderSummary.js';
 
 export const generateInvoice = async (order) => {
   if (!order) throw new Error('Order data is required to generate invoice');
+  const normalizedOrder = normalizeOrderSummary(order);
+
+  if (!normalizedOrder.orderNumber || normalizedOrder.items.length === 0) {
+    throw new Error('Complete order data is required to generate invoice');
+  }
 
   // Create a hidden container for the invoice HTML
   const container = document.createElement('div');
@@ -17,7 +23,7 @@ export const generateInvoice = async (order) => {
   container.style.boxSizing = 'border-box';
 
   // Format dates and currency safely
-  const orderDate = new Date(order.date || order.orderDate || Date.now()).toLocaleDateString('en-US', {
+  const orderDate = new Date(normalizedOrder.date || Date.now()).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -28,16 +34,13 @@ export const generateInvoice = async (order) => {
     return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
   };
 
-  // Safely extract items and addresses
-  const items = order.items || order.lineItems || [];
-  const billing = order.billing || order.billingAddress || order.shipping || {};
-  const shipping = order.shipping || order.shippingAddress || {};
-
-  // Calculate totals if not explicitly provided
-  const subtotal = order.subtotal || items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shippingCost = order.shippingCost !== undefined ? order.shippingCost : (subtotal >= 75 ? 0 : 10);
-  const tax = order.tax !== undefined ? order.tax : (subtotal * 0.08);
-  const total = order.total || order.totalAmount || (subtotal + shippingCost + tax);
+  const items = normalizedOrder.items;
+  const billing = normalizedOrder.billing;
+  const shipping = normalizedOrder.shipping;
+  const subtotal = normalizedOrder.subtotal;
+  const shippingCost = normalizedOrder.shippingTotal;
+  const tax = normalizedOrder.taxTotal;
+  const total = normalizedOrder.total;
 
   // Build the HTML structure
   container.innerHTML = `
@@ -50,9 +53,9 @@ export const generateInvoice = async (order) => {
         </div>
         <div style="text-align: right;">
           <h2 style="margin: 0; font-size: 28px; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px;">Invoice</h2>
-          <p style="margin: 8px 0 4px; font-size: 14px;"><strong>Order #:</strong> ${order.orderNumber || 'N/A'}</p>
+          <p style="margin: 8px 0 4px; font-size: 14px;"><strong>Order #:</strong> ${normalizedOrder.orderNumber}</p>
           <p style="margin: 0 0 4px; font-size: 14px;"><strong>Date:</strong> ${orderDate}</p>
-          <p style="margin: 0; font-size: 14px; text-transform: capitalize;"><strong>Status:</strong> ${order.status || order.orderStatus || 'Completed'}</p>
+          <p style="margin: 0; font-size: 14px; text-transform: capitalize;"><strong>Status:</strong> ${normalizedOrder.status || 'Completed'}</p>
         </div>
       </div>
 
@@ -69,16 +72,16 @@ export const generateInvoice = async (order) => {
         
         <div style="flex: 1; padding: 0 20px;">
           <h3 style="margin: 0 0 10px; font-size: 16px; color: #2f5725; text-transform: uppercase;">Bill To</h3>
-          <p style="margin: 0 0 4px; font-size: 14px; font-weight: bold;">${billing.firstName || order.customerName || ''} ${billing.lastName || ''}</p>
+          <p style="margin: 0 0 4px; font-size: 14px; font-weight: bold;">${billing.firstName} ${billing.lastName}</p>
           <p style="margin: 0 0 4px; font-size: 14px; color: #444;">${billing.address || ''}</p>
           <p style="margin: 0 0 4px; font-size: 14px; color: #444;">${billing.city || ''}, ${billing.state || ''} ${billing.zip || ''}</p>
           <p style="margin: 0 0 4px; font-size: 14px; color: #444;">${billing.country || 'US'}</p>
-          <p style="margin: 0; font-size: 14px; color: #444;">${order.customerEmail || order.email || ''}</p>
+          <p style="margin: 0; font-size: 14px; color: #444;">${billing.email || ''}</p>
         </div>
 
         <div style="flex: 1; padding-left: 20px;">
           <h3 style="margin: 0 0 10px; font-size: 16px; color: #2f5725; text-transform: uppercase;">Ship To</h3>
-          <p style="margin: 0 0 4px; font-size: 14px; font-weight: bold;">${shipping.firstName || order.customerName || ''} ${shipping.lastName || ''}</p>
+          <p style="margin: 0 0 4px; font-size: 14px; font-weight: bold;">${shipping.firstName} ${shipping.lastName}</p>
           <p style="margin: 0 0 4px; font-size: 14px; color: #444;">${shipping.address || ''}</p>
           <p style="margin: 0 0 4px; font-size: 14px; color: #444;">${shipping.city || ''}, ${shipping.state || ''} ${shipping.zip || ''}</p>
           <p style="margin: 0; font-size: 14px; color: #444;">${shipping.country || 'US'}</p>
@@ -106,7 +109,7 @@ export const generateInvoice = async (order) => {
               </td>
               <td style="padding: 12px; text-align: center; font-size: 14px; color: #333;">${item.quantity || 1}</td>
               <td style="padding: 12px; text-align: right; font-size: 14px; color: #333;">${formatCurrency(item.price)}</td>
-              <td style="padding: 12px; text-align: right; font-size: 14px; color: #333;">${formatCurrency((item.price || 0) * (item.quantity || 1))}</td>
+              <td style="padding: 12px; text-align: right; font-size: 14px; color: #333;">${formatCurrency(item.total)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -137,7 +140,7 @@ export const generateInvoice = async (order) => {
       <!-- Footer -->
       <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e4e4e7; text-align: center;">
         <p style="margin: 0 0 5px; font-size: 14px; font-weight: bold; color: #1a1a1a;">Thank you for your business!</p>
-        <p style="margin: 0; font-size: 12px; color: #666;">Payment Method: <span style="text-transform: capitalize;">${order.paymentMethod || 'Credit Card'}</span></p>
+        <p style="margin: 0; font-size: 12px; color: #666;">Payment Method: <span style="text-transform: capitalize;">${normalizedOrder.paymentMethod || 'Credit Card'}</span></p>
         <p style="margin: 10px 0 0; font-size: 11px; color: #888;">
           Returns accepted within 30 days of purchase. Items must be unworn and in original condition.<br>
           For support, please contact contact@anfastyles.shop
@@ -172,7 +175,7 @@ export const generateInvoice = async (order) => {
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`AnfaStyles-Order-${order.orderNumber || 'Invoice'}.pdf`);
+    pdf.save(`AnfaStyles-Order-${normalizedOrder.orderNumber}.pdf`);
     
     return true;
   } catch (error) {
