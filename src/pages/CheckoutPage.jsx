@@ -721,7 +721,9 @@ const CheckoutPage = () => {
           subtotal,
         });
 
-        if (updated?.data?.needs_shipping) {
+        const needsShipping = Boolean(updated?.data?.needs_shipping);
+
+        if (needsShipping) {
           if (shippingSelections.length === 0) {
             throw new Error(`${getShippingMethodLabel(formData.shippingMethod)} is not available for this address.`);
           }
@@ -739,7 +741,10 @@ const CheckoutPage = () => {
           }
         }
 
-        return nextStoreSession;
+        return {
+          storeSession: nextStoreSession,
+          needsShipping,
+        };
       };
       const finalizeStoreCheckout = async (checkoutRes) => {
         const checkoutData = checkoutRes?.data;
@@ -754,7 +759,9 @@ const CheckoutPage = () => {
         navigate(`/order-confirmation?orderId=${checkoutData.order_id}&orderNumber=${checkoutData.order_number || checkoutData.order_id}`);
       };
 
-      const createCheckoutBody = (paymentMethod, paymentDataEntries) => ({
+      const createCheckoutBody = (paymentMethod, paymentDataEntries, needsShipping = false) => ({
+        billing_address,
+        ...(needsShipping ? { shipping_address } : {}),
         payment_method: paymentMethod,
         payment_data: paymentDataEntries,
       });
@@ -773,7 +780,7 @@ const CheckoutPage = () => {
           throw new Error('Stripe is not configured for checkout.');
         }
 
-        const storeSession = await buildStoreCheckoutSession();
+        const { storeSession, needsShipping } = await buildStoreCheckoutSession();
 
         // 4) Create a Stripe PaymentMethod (Stripe.js v3+; createSource is not supported in newer Stripe.js builds).
         const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
@@ -815,20 +822,20 @@ const CheckoutPage = () => {
             { key: 'payment_method', value: 'stripe' },
             { key: 'wc-stripe-payment-method', value: paymentMethod.id },
             { key: 'wc-stripe-is-deferred-intent', value: true },
-          ]),
+          ], needsShipping),
         });
         await finalizeStoreCheckout(checkoutRes);
         return;
       }
 
       if (formData.paymentMethod === 'cod') {
-        const storeSession = await buildStoreCheckoutSession();
+        const { storeSession, needsShipping } = await buildStoreCheckoutSession();
         const checkoutRes = await storeFetch('/checkout', {
           method: 'POST',
           store: storeSession,
           body: createCheckoutBody('cod', [
             { key: 'payment_method', value: 'cod' },
-          ]),
+          ], needsShipping),
         });
 
         await finalizeStoreCheckout(checkoutRes);
@@ -876,7 +883,7 @@ const CheckoutPage = () => {
           throw new Error('WooPayments did not return a payment method.');
         }
 
-        const storeSession = await buildStoreCheckoutSession();
+        const { storeSession, needsShipping } = await buildStoreCheckoutSession();
         const checkoutRes = await storeFetch('/checkout', {
           method: 'POST',
           store: storeSession,
@@ -885,7 +892,7 @@ const CheckoutPage = () => {
             { key: 'wcpay-payment-method', value: paymentMethod.id },
             { key: 'wcpay-fraud-prevention-token', value: String(window?.wcpayFraudPreventionToken || '') },
             { key: 'wcpay-fingerprint', value: '' },
-          ]),
+          ], needsShipping),
         });
 
         await finalizeStoreCheckout(checkoutRes);
