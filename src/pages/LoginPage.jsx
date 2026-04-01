@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { notifyError, notifySuccess } from '@/lib/notifications.js';
@@ -115,9 +116,8 @@ const LoginPage = () => {
 
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 required
                 autoComplete="current-password"
@@ -130,6 +130,12 @@ const LoginPage = () => {
               />
               {errors.password && <p className="text-sm text-destructive mt-1">{errors.password}</p>}
             </div>
+
+            <p className="text-right text-sm text-muted-foreground">
+              <Link to="/forgot-password" className="text-primary hover:underline font-medium">
+                Forgot password?
+              </Link>
+            </p>
 
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? 'Logging in...' : 'Login'}

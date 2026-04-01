@@ -3,9 +3,11 @@ import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { User, Package, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
 import Header from '@/components/Header.jsx';
@@ -13,10 +15,21 @@ import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
 const AccountDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile, changePassword } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileErrors, setProfileErrors] = useState({});
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState({});
 
   const normalizeOrders = (data) => {
     const raw = Array.isArray(data) ? data : (Array.isArray(data?.orders) ? data.orders : []);
@@ -34,6 +47,13 @@ const AccountDashboard = () => {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setEmail(user.email || '');
+    }
+  }, [user]);
+
   const fetchOrders = async () => {
     try {
       const response = await apiServerClient.fetch('/orders');
@@ -48,9 +68,79 @@ const AccountDashboard = () => {
     }
   };
 
+  const handleSaveProfile = async (event) => {
+    event.preventDefault();
+    const nextErrors = {};
+
+    if (!name.trim()) {
+      nextErrors.name = 'Name is required';
+    }
+    if (!email.trim()) {
+      nextErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      nextErrors.email = 'Enter a valid email address';
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setProfileErrors(nextErrors);
+      notifyError('Cannot save profile', 'Fix validation errors first.');
+      return;
+    }
+
+    setProfileLoading(true);
+    try {
+      await updateProfile({ name: name.trim(), email: email.trim() });
+      notifySuccess('Profile updated', 'Your account details have been saved.');
+      setProfileErrors({});
+    } catch (error) {
+      notifyError('Save failed', error.message || 'Unable to update profile.');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (event) => {
+    event.preventDefault();
+    const nextErrors = {};
+
+    if (!currentPassword) {
+      nextErrors.currentPassword = 'Current password is required';
+    }
+    if (!newPassword) {
+      nextErrors.newPassword = 'New password is required';
+    } else if (newPassword.length < 8) {
+      nextErrors.newPassword = 'Password must be at least 8 characters';
+    }
+    if (!confirmNewPassword) {
+      nextErrors.confirmNewPassword = 'Please confirm new password';
+    } else if (confirmNewPassword !== newPassword) {
+      nextErrors.confirmNewPassword = 'Passwords do not match';
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setPasswordErrors(nextErrors);
+      notifyError('Cannot change password', 'Fix validation errors first.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await changePassword({ currentPassword, newPassword });
+      notifySuccess('Password changed', 'Your password has been updated successfully.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setPasswordErrors({});
+    } catch (error) {
+      notifyError('Password change failed', error.message || 'Please try again later.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
-    toast.success('Logged out successfully');
+    notifySuccess('Logged out successfully', 'You are now signed out.');
   };
 
   return (
@@ -101,6 +191,95 @@ const AccountDashboard = () => {
               <h2 className="font-bold mb-2">Settings</h2>
               <p className="text-sm text-muted-foreground">Update your preferences</p>
             </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-6 mb-6">
+            <h2 className="text-2xl font-bold mb-4">Account details</h2>
+            <form onSubmit={handleSaveProfile} className="grid gap-4">
+              <div>
+                <label htmlFor="account-name" className="block text-sm font-medium mb-1">Full name</label>
+                <Input
+                  id="account-name"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setProfileErrors((prev) => ({ ...prev, name: '' }));
+                  }}
+                  aria-invalid={Boolean(profileErrors.name)}
+                />
+                {profileErrors.name && <p className="text-destructive text-sm mt-1">{profileErrors.name}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="account-email" className="block text-sm font-medium mb-1">Email</label>
+                <Input
+                  id="account-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setProfileErrors((prev) => ({ ...prev, email: '' }));
+                  }}
+                  aria-invalid={Boolean(profileErrors.email)}
+                />
+                {profileErrors.email && <p className="text-destructive text-sm mt-1">{profileErrors.email}</p>}
+              </div>
+
+              <Button type="submit" disabled={profileLoading} className="w-full md:w-auto">
+                {profileLoading ? 'Saving...' : 'Save account details'}
+              </Button>
+            </form>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-6 mb-8">
+            <h2 className="text-2xl font-bold mb-4">Change password</h2>
+            <form onSubmit={handleChangePassword} className="grid gap-4">
+              <div>
+                <label htmlFor="current-password" className="block text-sm font-medium mb-1">Current password</label>
+                <PasswordInput
+                  id="current-password"
+                  value={currentPassword}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    setPasswordErrors((prev) => ({ ...prev, currentPassword: '' }));
+                  }}
+                  aria-invalid={Boolean(passwordErrors.currentPassword)}
+                />
+                {passwordErrors.currentPassword && <p className="text-destructive text-sm mt-1">{passwordErrors.currentPassword}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="new-password" className="block text-sm font-medium mb-1">New password</label>
+                <PasswordInput
+                  id="new-password"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordErrors((prev) => ({ ...prev, newPassword: '' }));
+                  }}
+                  aria-invalid={Boolean(passwordErrors.newPassword)}
+                />
+                {passwordErrors.newPassword && <p className="text-destructive text-sm mt-1">{passwordErrors.newPassword}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="confirm-new-password" className="block text-sm font-medium mb-1">Confirm new password</label>
+                <PasswordInput
+                  id="confirm-new-password"
+                  value={confirmNewPassword}
+                  onChange={(e) => {
+                    setConfirmNewPassword(e.target.value);
+                    setPasswordErrors((prev) => ({ ...prev, confirmNewPassword: '' }));
+                  }}
+                  aria-invalid={Boolean(passwordErrors.confirmNewPassword)}
+                />
+                {passwordErrors.confirmNewPassword && <p className="text-destructive text-sm mt-1">{passwordErrors.confirmNewPassword}</p>}
+              </div>
+
+              <Button type="submit" disabled={passwordLoading} className="w-full md:w-auto">
+                {passwordLoading ? 'Saving...' : 'Save new password'}
+              </Button>
+            </form>
           </div>
 
           <div className="bg-card border border-border rounded-xl p-6">

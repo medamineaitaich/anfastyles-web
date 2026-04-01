@@ -7,6 +7,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -1438,9 +1439,8 @@ const CheckoutPage = () => {
                         <div className="mt-4 grid gap-4 md:grid-cols-2">
                           <div>
                             <Label htmlFor="checkout-password">Password *</Label>
-                            <Input
+                            <PasswordInput
                               id="checkout-password"
-                              type="password"
                               value={accountPassword}
                               onChange={(event) => handleAccountFieldChange('password', event.target.value)}
                               onBlur={() => handleAccountFieldBlur('password')}
@@ -1455,9 +1455,8 @@ const CheckoutPage = () => {
 
                           <div>
                             <Label htmlFor="checkout-confirm-password">Confirm password *</Label>
-                            <Input
+                            <PasswordInput
                               id="checkout-confirm-password"
-                              type="password"
                               value={accountConfirmPassword}
                               onChange={(event) => handleAccountFieldChange('confirmPassword', event.target.value)}
                               onBlur={() => handleAccountFieldBlur('confirmPassword')}

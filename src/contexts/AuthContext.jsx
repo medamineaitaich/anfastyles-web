@@ -106,6 +106,45 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const updateProfile = async ({ name, email }) => {
+    const response = await apiServerClient.fetch('/auth/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || 'Failed to update profile');
+    }
+
+    const data = await response.json();
+    if (data?.name || data?.email) {
+      applyAuthenticatedUser({
+        userId: data.userId || user?.userId,
+        email: data.email || email,
+        name: data.name || name,
+      });
+    }
+
+    return data;
+  };
+
+  const changePassword = async ({ currentPassword, newPassword }) => {
+    const response = await apiServerClient.fetch('/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || 'Failed to change password');
+    }
+
+    return response.json();
+  };
+
   const logout = async () => {
     try {
       await apiServerClient.fetch('/auth/logout', {
@@ -126,7 +165,9 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    verifySession
+    verifySession,
+    updateProfile,
+    changePassword,
   };
 
   return (
