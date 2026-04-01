@@ -5,12 +5,38 @@ import { ChevronLeft, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
 import { generateInvoice } from '@/components/InvoiceGenerator.jsx';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
+import { normalizeOrderSummary } from '@/lib/orderSummary.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
+
+const formatCurrency = (value) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : '$0.00';
+};
+
+const formatOrderDate = (value) => {
+  const date = new Date(value || Date.now());
+  if (Number.isNaN(date.getTime())) return 'Unknown date';
+
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const getAddressLines = (address = {}) => {
+  const name = [address.firstName, address.lastName].filter(Boolean).join(' ').trim();
+  const street = [address.address, address.address2].filter(Boolean).join(', ').trim();
+  const locality = [address.city, address.state, address.zip].filter(Boolean).join(' ').trim();
+  const lines = [name, street, locality, address.country, address.email].filter(Boolean);
+
+  return lines.length > 0 ? lines : ['Not available'];
+};
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -29,9 +55,10 @@ const OrderDetailPage = () => {
       if (!response.ok) throw new Error('Order not found');
 
       const data = await response.json();
-      setOrder(data);
+      setOrder(normalizeOrderSummary(data));
     } catch (error) {
       console.error('Error fetching order:', error);
+      notifyError('Unable to load order details', error.message || 'Please try again in a moment.');
     } finally {
       setLoading(false);
     }
@@ -43,10 +70,10 @@ const OrderDetailPage = () => {
     setDownloading(true);
     try {
       await generateInvoice(order);
-      toast.success('Invoice downloaded successfully');
+      notifySuccess('Invoice downloaded', 'Your invoice PDF is ready.');
     } catch (error) {
-      toast.error('Failed to generate invoice');
       console.error(error);
+      notifyError('Invoice download failed', error.message || 'Failed to generate invoice.');
     } finally {
       setDownloading(false);
     }
@@ -86,6 +113,10 @@ const OrderDetailPage = () => {
     );
   }
 
+  const items = Array.isArray(order.items) ? order.items : [];
+  const shippingLines = getAddressLines(order.shipping);
+  const billingLines = getAddressLines(order.billing);
+
   return (
     <>
       <Helmet>
@@ -110,12 +141,7 @@ const OrderDetailPage = () => {
             <div>
               <h1 className="mb-2 text-4xl font-bold">Order #{order.orderNumber}</h1>
               <p className="text-muted-foreground">
-                Placed on{' '}
-                {new Date(order.date).toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
+                Placed on {formatOrderDate(order.date)}
               </p>
             </div>
             <div className="flex gap-3">
@@ -147,7 +173,7 @@ const OrderDetailPage = () => {
 
             <div className="rounded-xl border border-border bg-card p-6">
               <h3 className="mb-3 font-semibold">Total amount</h3>
-              <p className="text-2xl font-bold font-variant-tabular">${order.total.toFixed(2)}</p>
+              <p className="text-2xl font-bold font-variant-tabular">{formatCurrency(order.total)}</p>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6">
@@ -159,7 +185,7 @@ const OrderDetailPage = () => {
           <div className="mb-6 rounded-xl border border-border bg-card p-6">
             <h2 className="mb-4 text-xl font-bold">Order items</h2>
             <div className="space-y-4">
-              {order.items?.map((item, index) => (
+              {items.length > 0 ? items.map((item, index) => (
                 <div key={index} className="flex gap-4">
                   <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
                     {item.image && (
@@ -172,9 +198,11 @@ const OrderDetailPage = () => {
                     {item.size && <p className="text-sm text-muted-foreground">Size: {item.size.toUpperCase()}</p>}
                     {item.color && <p className="text-sm text-muted-foreground">Color: {item.color}</p>}
                   </div>
-                  <p className="font-semibold font-variant-tabular">${(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="font-semibold font-variant-tabular">{formatCurrency(item.total ?? item.price * item.quantity)}</p>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-muted-foreground">No order items were returned for this order.</p>
+              )}
             </div>
 
             <Separator className="my-6" />
@@ -182,20 +210,20 @@ const OrderDetailPage = () => {
             <div className="ml-auto max-w-xs space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-variant-tabular">${(order.subtotal || order.total * 0.9).toFixed(2)}</span>
+                <span className="font-variant-tabular">{formatCurrency(order.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping</span>
-                <span className="font-variant-tabular">${(order.shippingCost || 0).toFixed(2)}</span>
+                <span className="font-variant-tabular">{formatCurrency(order.shippingTotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax</span>
-                <span className="font-variant-tabular">${(order.tax || order.total * 0.1).toFixed(2)}</span>
+                <span className="font-variant-tabular">{formatCurrency(order.taxTotal)}</span>
               </div>
               <Separator className="my-2" />
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span className="font-variant-tabular">${order.total.toFixed(2)}</span>
+                <span className="font-variant-tabular">{formatCurrency(order.total)}</span>
               </div>
             </div>
           </div>
@@ -204,20 +232,18 @@ const OrderDetailPage = () => {
             <div className="rounded-xl border border-border bg-card p-6">
               <h2 className="mb-4 text-xl font-bold">Shipping address</h2>
               <div className="space-y-1 text-sm">
-                <p>{order.shipping?.firstName} {order.shipping?.lastName}</p>
-                <p>{order.shipping?.address}</p>
-                <p>{order.shipping?.city}, {order.shipping?.state} {order.shipping?.zip}</p>
-                <p>{order.shipping?.country}</p>
+                {shippingLines.map((line, index) => (
+                  <p key={`shipping-line-${index}`}>{line}</p>
+                ))}
               </div>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-6">
               <h2 className="mb-4 text-xl font-bold">Billing address</h2>
               <div className="space-y-1 text-sm">
-                <p>{order.billing?.firstName} {order.billing?.lastName}</p>
-                <p>{order.billing?.address}</p>
-                <p>{order.billing?.city}, {order.billing?.state} {order.billing?.zip}</p>
-                <p>{order.billing?.country}</p>
+                {billingLines.map((line, index) => (
+                  <p key={`billing-line-${index}`}>{line}</p>
+                ))}
               </div>
             </div>
           </div>
