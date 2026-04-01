@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async ({ name, email }) => {
-    const response = await apiServerClient.fetch('/auth/profile', {
+    const response = await apiServerClient.fetch('/auth/update-profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email }),
@@ -119,22 +119,28 @@ export const AuthProvider = ({ children }) => {
     }
 
     const data = await response.json();
-    if (data?.name || data?.email) {
+    const returnedUser = data?.user || null;
+    if (returnedUser || data?.name || data?.email) {
+      const nextName = returnedUser
+        ? `${returnedUser.firstName || ''} ${returnedUser.lastName || ''}`.trim() || name
+        : (data.name || name);
+      const nextEmail = returnedUser?.email || data?.email || email;
+
       applyAuthenticatedUser({
-        userId: data.userId || user?.userId,
-        email: data.email || email,
-        name: data.name || name,
+        userId: returnedUser?.userId || data.userId || user?.userId,
+        email: nextEmail,
+        name: nextName,
       });
     }
 
     return data;
   };
 
-  const changePassword = async ({ currentPassword, newPassword }) => {
+  const changePassword = async ({ currentPassword, newPassword, confirmPassword }) => {
     const response = await apiServerClient.fetch('/auth/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
     });
 
     if (!response.ok) {

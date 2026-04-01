@@ -125,7 +125,11 @@ const AccountDashboard = () => {
 
     setPasswordLoading(true);
     try {
-      await changePassword({ currentPassword, newPassword });
+      await changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword: confirmNewPassword,
+      });
       notifySuccess('Password changed', 'Your password has been updated successfully.');
       setCurrentPassword('');
       setNewPassword('');
