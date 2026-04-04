@@ -186,6 +186,81 @@ const countryOptions = [
   { value: 'CA', label: 'Canada' },
   { value: 'UK', label: 'United Kingdom' },
 ];
+const REGION_OPTIONS_BY_COUNTRY = {
+  US: [
+    { value: 'AL', label: 'Alabama' },
+    { value: 'AK', label: 'Alaska' },
+    { value: 'AZ', label: 'Arizona' },
+    { value: 'AR', label: 'Arkansas' },
+    { value: 'CA', label: 'California' },
+    { value: 'CO', label: 'Colorado' },
+    { value: 'CT', label: 'Connecticut' },
+    { value: 'DE', label: 'Delaware' },
+    { value: 'DC', label: 'District of Columbia' },
+    { value: 'FL', label: 'Florida' },
+    { value: 'GA', label: 'Georgia' },
+    { value: 'HI', label: 'Hawaii' },
+    { value: 'ID', label: 'Idaho' },
+    { value: 'IL', label: 'Illinois' },
+    { value: 'IN', label: 'Indiana' },
+    { value: 'IA', label: 'Iowa' },
+    { value: 'KS', label: 'Kansas' },
+    { value: 'KY', label: 'Kentucky' },
+    { value: 'LA', label: 'Louisiana' },
+    { value: 'ME', label: 'Maine' },
+    { value: 'MD', label: 'Maryland' },
+    { value: 'MA', label: 'Massachusetts' },
+    { value: 'MI', label: 'Michigan' },
+    { value: 'MN', label: 'Minnesota' },
+    { value: 'MS', label: 'Mississippi' },
+    { value: 'MO', label: 'Missouri' },
+    { value: 'MT', label: 'Montana' },
+    { value: 'NE', label: 'Nebraska' },
+    { value: 'NV', label: 'Nevada' },
+    { value: 'NH', label: 'New Hampshire' },
+    { value: 'NJ', label: 'New Jersey' },
+    { value: 'NM', label: 'New Mexico' },
+    { value: 'NY', label: 'New York' },
+    { value: 'NC', label: 'North Carolina' },
+    { value: 'ND', label: 'North Dakota' },
+    { value: 'OH', label: 'Ohio' },
+    { value: 'OK', label: 'Oklahoma' },
+    { value: 'OR', label: 'Oregon' },
+    { value: 'PA', label: 'Pennsylvania' },
+    { value: 'RI', label: 'Rhode Island' },
+    { value: 'SC', label: 'South Carolina' },
+    { value: 'SD', label: 'South Dakota' },
+    { value: 'TN', label: 'Tennessee' },
+    { value: 'TX', label: 'Texas' },
+    { value: 'UT', label: 'Utah' },
+    { value: 'VT', label: 'Vermont' },
+    { value: 'VA', label: 'Virginia' },
+    { value: 'WA', label: 'Washington' },
+    { value: 'WV', label: 'West Virginia' },
+    { value: 'WI', label: 'Wisconsin' },
+    { value: 'WY', label: 'Wyoming' },
+  ],
+  CA: [
+    { value: 'AB', label: 'Alberta' },
+    { value: 'BC', label: 'British Columbia' },
+    { value: 'MB', label: 'Manitoba' },
+    { value: 'NB', label: 'New Brunswick' },
+    { value: 'NL', label: 'Newfoundland and Labrador' },
+    { value: 'NT', label: 'Northwest Territories' },
+    { value: 'NS', label: 'Nova Scotia' },
+    { value: 'NU', label: 'Nunavut' },
+    { value: 'ON', label: 'Ontario' },
+    { value: 'PE', label: 'Prince Edward Island' },
+    { value: 'QC', label: 'Quebec' },
+    { value: 'SK', label: 'Saskatchewan' },
+    { value: 'YT', label: 'Yukon' },
+  ],
+};
+
+const normalizeCountryCode = (value) => String(value || '').trim().toUpperCase();
+const getRegionOptions = (country) => REGION_OPTIONS_BY_COUNTRY[normalizeCountryCode(country)] || null;
+const getRegionFieldLabel = (country) => (normalizeCountryCode(country) === 'CA' ? 'Province' : 'State');
+const getRegionPlaceholder = (country) => (normalizeCountryCode(country) === 'CA' ? 'Select a province' : 'Select a state');
 
 const createAddressFormState = (overrides = {}) => ({
   firstName: '',
@@ -238,8 +313,16 @@ const AddressFields = ({
   onFieldBlur,
   onCountryChange,
   includeEmail,
-}) => (
-  <div className="grid gap-4 md:grid-cols-2">
+}) => {
+  const country = normalizeCountryCode(values.country);
+  const regionOptions = getRegionOptions(country);
+  const usesRegionSelect = Array.isArray(regionOptions) && regionOptions.length > 0;
+  const regionLabel = getRegionFieldLabel(country);
+  const regionPlaceholder = getRegionPlaceholder(country);
+  const stateErrorKey = getAddressErrorKey(formKey, 'state');
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
     <div>
       <Label htmlFor={`${formKey}-firstName`}>First name *</Label>
       <Input
@@ -325,17 +408,34 @@ const AddressFields = ({
     </div>
 
     <div>
-      <Label htmlFor={`${formKey}-state`}>State *</Label>
-      <Input
-        id={`${formKey}-state`}
-        value={values.state}
-        onChange={(event) => onFieldChange('state', event.target.value)}
-        onBlur={() => onFieldBlur('state')}
-        autoComplete={formKey === 'billing' ? 'address-level1' : 'shipping address-level1'}
-        required
-        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'state')])}
-      />
-      {errors[getAddressErrorKey(formKey, 'state')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'state')]}</p>}
+      <Label htmlFor={`${formKey}-state`}>{regionLabel} *</Label>
+      {usesRegionSelect ? (
+        <Select value={values.state} onValueChange={(nextValue) => onFieldChange('state', nextValue)}>
+          <SelectTrigger
+            id={`${formKey}-state`}
+            aria-invalid={Boolean(errors[stateErrorKey])}
+            className={errors[stateErrorKey] ? 'border-destructive ring-2 ring-destructive/20 focus:ring-destructive/30' : ''}
+          >
+            <SelectValue placeholder={regionPlaceholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {regionOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Input
+          id={`${formKey}-state`}
+          value={values.state}
+          onChange={(event) => onFieldChange('state', event.target.value)}
+          onBlur={() => onFieldBlur('state')}
+          autoComplete={formKey === 'billing' ? 'address-level1' : 'shipping address-level1'}
+          required
+          aria-invalid={Boolean(errors[stateErrorKey])}
+        />
+      )}
+      {errors[stateErrorKey] && <p className="mt-1 text-sm text-destructive">{errors[stateErrorKey]}</p>}
     </div>
 
     <div>
@@ -366,7 +466,8 @@ const AddressFields = ({
       </Select>
     </div>
   </div>
-);
+  );
+};
 
 const StripeElementsBridge = ({ onChange }) => {
   const stripe = useStripe();
@@ -669,10 +770,34 @@ const CheckoutPage = () => {
 
   const handleAddressCountryChange = (formKey, value) => {
     const setter = formKey === 'billing' ? setBillingData : setShippingData;
-    setter((prev) => ({ ...prev, country: value }));
+    const nextCountry = normalizeCountryCode(value);
+    const regionOptions = getRegionOptions(nextCountry);
+    const allowedValues = regionOptions ? new Set(regionOptions.map((option) => option.value)) : null;
+
+    setter((prev) => {
+      const nextState = allowedValues && prev.state && !allowedValues.has(String(prev.state).trim())
+        ? ''
+        : prev.state;
+
+      if (prev.country === nextCountry && nextState === prev.state) return prev;
+      return {
+        ...prev,
+        country: nextCountry,
+        state: nextState,
+      };
+    });
+
+    const stateErrorKey = getAddressErrorKey(formKey, 'state');
+    if (errors[stateErrorKey]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[stateErrorKey];
+        return next;
+      });
+    }
   };
 
-  const validateAddressField = (formKey, field, value) => {
+  const validateAddressField = (formKey, field, value, country) => {
     const trimmedValue = String(value || '').trim();
 
     if (!trimmedValue) {
@@ -683,12 +808,22 @@ const CheckoutPage = () => {
       return 'Enter a valid email address';
     }
 
+    if (field === 'state') {
+      const regionOptions = getRegionOptions(country);
+      if (Array.isArray(regionOptions) && regionOptions.length > 0) {
+        const allowed = regionOptions.some((option) => option.value === trimmedValue);
+        if (!allowed) {
+          return normalizeCountryCode(country) === 'CA' ? 'Select a valid province' : 'Select a valid state';
+        }
+      }
+    }
+
     return '';
   };
 
   const handleAddressFieldBlur = (formKey, field) => {
     const values = formKey === 'billing' ? billingData : shippingData;
-    const nextMessage = validateAddressField(formKey, field, values[field]);
+    const nextMessage = validateAddressField(formKey, field, values[field], values.country);
     const errorKey = getAddressErrorKey(formKey, field);
 
     setErrors((prev) => {
@@ -798,7 +933,7 @@ const CheckoutPage = () => {
     const nextErrors = {};
 
     requiredFields.forEach((field) => {
-      const message = validateAddressField(formKey, field, values[field]);
+      const message = validateAddressField(formKey, field, values[field], values.country);
       if (message) {
         nextErrors[getAddressErrorKey(formKey, field)] = message;
       }
