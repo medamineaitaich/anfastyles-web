@@ -515,7 +515,6 @@ const CheckoutPage = () => {
   const [billingData, setBillingData] = useState(() => createAddressFormState());
   const [shippingData, setShippingData] = useState(() => createAddressFormState());
   const [shippingSameAsBilling, setShippingSameAsBilling] = useState(true);
-  const [createAccount, setCreateAccount] = useState(false);
   const [accountPassword, setAccountPassword] = useState('');
   const [accountConfirmPassword, setAccountConfirmPassword] = useState('');
   const [profilePrefillKey, setProfilePrefillKey] = useState('');
@@ -847,15 +846,6 @@ const CheckoutPage = () => {
     });
   };
 
-  const handleAccountToggle = (checked) => {
-    const nextChecked = checked !== false;
-    setCreateAccount(nextChecked);
-
-    if (!nextChecked) {
-      clearAccountErrors();
-    }
-  };
-
   const handleAccountFieldChange = (field, value) => {
     if (field === 'password') {
       setAccountPassword(value);
@@ -957,7 +947,7 @@ const CheckoutPage = () => {
       ...(shippingSameAsBilling ? {} : getAddressValidationErrors('shipping', shippingData, ['firstName', 'lastName', 'address', 'city', 'state', 'zip'])),
     };
 
-    if (!authenticated && createAccount) {
+    if (!authenticated) {
       if (!accountPassword) {
         newErrors[getAccountErrorKey('password')] = 'Password is required';
       } else if (accountPassword.length < 8) {
@@ -991,7 +981,7 @@ const CheckoutPage = () => {
       let paymentData = null;
       let paymentMethodGateway = formData.paymentMethod;
       let checkoutUser = authenticated ? user : null;
-      const createAccountDuringCheckout = !authenticated && createAccount;
+      const createAccountDuringCheckout = !authenticated;
       const storeFetch = async (path, { method = 'GET', body, store } = {}) => {
         const headers = { 'Content-Type': 'application/json' };
         if (store?.nonce) headers['x-store-nonce'] = store.nonce;
@@ -1099,8 +1089,8 @@ const CheckoutPage = () => {
             nextErrors[getAccountErrorKey('password')] = message;
           } else if (/match/i.test(message)) {
             nextErrors[getAccountErrorKey('confirmPassword')] = message;
-          } else if (/already exists/i.test(message)) {
-            nextErrors[getAccountErrorKey('email')] = message;
+          } else if (/already exists|already registered|duplicate/i.test(message)) {
+            nextErrors[getAccountErrorKey('email')] = 'An account already exists for this email. Please sign in to continue.';
           } else {
             nextErrors[getAccountErrorKey('general')] = message;
           }
@@ -1554,69 +1544,60 @@ const CheckoutPage = () => {
 
                   {!authenticated && (
                     <div className="mt-5 rounded-xl border border-border/60 bg-background/40 px-4 py-4">
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          id="createAccount"
-                          checked={createAccount}
-                          onCheckedChange={handleAccountToggle}
-                        />
-                        <div className="flex-1 space-y-1">
-                          <Label htmlFor="createAccount" className="cursor-pointer font-semibold">
-                            Create an account
-                          </Label>
-                          <p className="text-sm text-muted-foreground">
-                            Save your details for faster checkout next time.
-                          </p>
-                        </div>
+                      <div className="space-y-1">
+                        <p className="font-semibold">
+                          Your account will be created during checkout
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Set a password now so you can access your order history and checkout faster next time.
+                        </p>
                       </div>
 
-                      {createAccount && (
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-                          <div>
-                            <Label htmlFor="checkout-password">Password *</Label>
-                            <PasswordInput
-                              id="checkout-password"
-                              value={accountPassword}
-                              onChange={(event) => handleAccountFieldChange('password', event.target.value)}
-                              onBlur={() => handleAccountFieldBlur('password')}
-                              autoComplete="new-password"
-                              required
-                              aria-invalid={Boolean(errors[getAccountErrorKey('password')])}
-                            />
-                            {errors[getAccountErrorKey('password')] && (
-                              <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('password')]}</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <Label htmlFor="checkout-confirm-password">Confirm password *</Label>
-                            <PasswordInput
-                              id="checkout-confirm-password"
-                              value={accountConfirmPassword}
-                              onChange={(event) => handleAccountFieldChange('confirmPassword', event.target.value)}
-                              onBlur={() => handleAccountFieldBlur('confirmPassword')}
-                              autoComplete="new-password"
-                              required
-                              aria-invalid={Boolean(errors[getAccountErrorKey('confirmPassword')])}
-                            />
-                            {errors[getAccountErrorKey('confirmPassword')] && (
-                              <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('confirmPassword')]}</p>
-                            )}
-                          </div>
-
-                          {errors[getAccountErrorKey('email')] && (
-                            <div className="md:col-span-2">
-                              <p className="text-sm text-destructive">{errors[getAccountErrorKey('email')]}</p>
-                            </div>
-                          )}
-
-                          {errors[getAccountErrorKey('general')] && (
-                            <div className="md:col-span-2">
-                              <p className="text-sm text-destructive">{errors[getAccountErrorKey('general')]}</p>
-                            </div>
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div>
+                          <Label htmlFor="checkout-password">Password *</Label>
+                          <PasswordInput
+                            id="checkout-password"
+                            value={accountPassword}
+                            onChange={(event) => handleAccountFieldChange('password', event.target.value)}
+                            onBlur={() => handleAccountFieldBlur('password')}
+                            autoComplete="new-password"
+                            required
+                            aria-invalid={Boolean(errors[getAccountErrorKey('password')])}
+                          />
+                          {errors[getAccountErrorKey('password')] && (
+                            <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('password')]}</p>
                           )}
                         </div>
-                      )}
+
+                        <div>
+                          <Label htmlFor="checkout-confirm-password">Confirm password *</Label>
+                          <PasswordInput
+                            id="checkout-confirm-password"
+                            value={accountConfirmPassword}
+                            onChange={(event) => handleAccountFieldChange('confirmPassword', event.target.value)}
+                            onBlur={() => handleAccountFieldBlur('confirmPassword')}
+                            autoComplete="new-password"
+                            required
+                            aria-invalid={Boolean(errors[getAccountErrorKey('confirmPassword')])}
+                          />
+                          {errors[getAccountErrorKey('confirmPassword')] && (
+                            <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('confirmPassword')]}</p>
+                          )}
+                        </div>
+
+                        {errors[getAccountErrorKey('email')] && (
+                          <div className="md:col-span-2">
+                            <p className="text-sm text-destructive">{errors[getAccountErrorKey('email')]}</p>
+                          </div>
+                        )}
+
+                        {errors[getAccountErrorKey('general')] && (
+                          <div className="md:col-span-2">
+                            <p className="text-sm text-destructive">{errors[getAccountErrorKey('general')]}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
