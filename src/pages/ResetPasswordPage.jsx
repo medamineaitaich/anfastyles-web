@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import apiServerClient from '@/lib/apiServerClient';
@@ -15,13 +14,27 @@ import CartDrawer from '@/components/CartDrawer.jsx';
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+  const resetKey = searchParams.get('key');
+  const resetLogin = searchParams.get('login');
   const navigate = useNavigate();
+  const resetParams = useMemo(() => {
+    if (resetKey && resetLogin) {
+      return { key: resetKey, login: resetLogin, mode: 'wordpress' };
+    }
+
+    if (token) {
+      return { token, mode: 'legacy' };
+    }
+
+    return null;
+  }, [resetKey, resetLogin, token]);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [linkError, setLinkError] = useState('');
 
   const validateField = (field, value) => {
     if (field === 'password') {
@@ -41,8 +54,10 @@ const ResetPasswordPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!token) {
-      notifyError('Reset token missing', 'The password reset link is invalid or expired.');
+    if (!resetParams) {
+      const message = 'Invalid or expired reset link.';
+      setLinkError(message);
+      notifyError('Reset link unavailable', message);
       return;
     }
 
@@ -55,12 +70,18 @@ const ResetPasswordPage = () => {
     }
 
     setLoading(true);
+    setLinkError('');
 
     try {
       const response = await apiServerClient.fetch('/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password })
+        body: JSON.stringify({
+          ...resetParams,
+          password,
+          newPassword: password,
+          confirmPassword,
+        })
       });
 
       if (!response.ok) {
@@ -71,7 +92,11 @@ const ResetPasswordPage = () => {
       notifySuccess('Password reset', 'Your password has been changed successfully. Please login.');
       navigate('/login');
     } catch (error) {
-      notifyError('Reset failed', error.message || 'Please try again later.');
+      const message = error.message || 'Please try again later.';
+      if (/invalid|expired/i.test(message)) {
+        setLinkError('Invalid or expired reset link.');
+      }
+      notifyError('Reset failed', message);
     } finally {
       setLoading(false);
     }
@@ -94,11 +119,15 @@ const ResetPasswordPage = () => {
             </div>
             <h1 className="text-3xl font-bold mb-2">Reset password</h1>
             <p className="text-muted-foreground">
-              {token ? 'Set a new password for your account.' : 'Invalid or expired reset link.'}
+              {resetParams ? 'Set a new password for your account.' : 'Invalid or expired reset link.'}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-6 space-y-4">
+            {linkError && (
+              <p className="text-sm text-destructive">{linkError}</p>
+            )}
+
             <div>
               <Label htmlFor="password">New password</Label>
               <PasswordInput
@@ -129,7 +158,7 @@ const ResetPasswordPage = () => {
               {errors.confirmPassword && <p className="text-sm text-destructive mt-1">{errors.confirmPassword}</p>}
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || !token}>
+            <Button type="submit" className="w-full" disabled={loading || !resetParams}>
               {loading ? 'Saving...' : 'Save new password'}
             </Button>
 
