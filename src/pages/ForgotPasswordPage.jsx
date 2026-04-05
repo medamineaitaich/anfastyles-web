@@ -12,6 +12,7 @@ import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
 const isValidEmail = (value) => /\S+@\S+\.\S+/.test(String(value || '').trim());
+const FORGOT_PASSWORD_SUCCESS_MESSAGE = 'If an account exists for this email, a password reset link has been sent.';
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -49,7 +50,7 @@ const ForgotPasswordPage = () => {
       }
 
       setSent(true);
-      notifySuccess('Reset link sent', 'Check your email for password reset instructions.');
+      notifySuccess('Check your email', FORGOT_PASSWORD_SUCCESS_MESSAGE);
     } catch (error) {
       notifyError('Unable to send reset link', error.message || 'Please try again later.');
     } finally {
@@ -98,7 +99,7 @@ const ForgotPasswordPage = () => {
             </Button>
 
             {sent && (
-              <p className="text-sm text-success mt-1">A reset link has been sent if the email exists in our system.</p>
+              <p className="text-sm text-success mt-1">{FORGOT_PASSWORD_SUCCESS_MESSAGE}</p>
             )}
 
             <p className="text-center text-sm text-muted-foreground">

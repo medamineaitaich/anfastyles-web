@@ -369,14 +369,18 @@ const AddressFields = ({
     )}
 
     <div>
-      <Label htmlFor={`${formKey}-phone`}>Phone</Label>
+      <Label htmlFor={`${formKey}-phone`}>{includeEmail ? 'Phone *' : 'Phone'}</Label>
       <Input
         id={`${formKey}-phone`}
         type="tel"
         value={values.phone}
         onChange={(event) => onFieldChange('phone', event.target.value)}
+        onBlur={() => onFieldBlur('phone')}
         autoComplete={formKey === 'billing' ? 'tel' : 'shipping tel'}
+        required={includeEmail}
+        aria-invalid={Boolean(errors[getAddressErrorKey(formKey, 'phone')])}
       />
+      {errors[getAddressErrorKey(formKey, 'phone')] && <p className="mt-1 text-sm text-destructive">{errors[getAddressErrorKey(formKey, 'phone')]}</p>}
     </div>
 
     <div className="md:col-span-2">
@@ -943,7 +947,7 @@ const CheckoutPage = () => {
 
   const validateCheckoutForm = () => {
     const newErrors = {
-      ...getAddressValidationErrors('billing', billingData, ['firstName', 'lastName', 'email', 'address', 'city', 'state', 'zip']),
+      ...getAddressValidationErrors('billing', billingData, ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zip']),
       ...(shippingSameAsBilling ? {} : getAddressValidationErrors('shipping', shippingData, ['firstName', 'lastName', 'address', 'city', 'state', 'zip'])),
     };
 
