@@ -18,11 +18,18 @@ export const AuthProvider = ({ children }) => {
   const [authenticated, setAuthenticated] = useState(false);
 
   const applyAuthenticatedUser = (nextUser) => {
+    const normalizedUser = nextUser
+      ? {
+          ...nextUser,
+          name: nextUser.name || `${nextUser.firstName || ''} ${nextUser.lastName || ''}`.trim() || nextUser.email || '',
+        }
+      : null;
+
     setAuthenticated(true);
-    setUser(nextUser);
+    setUser(normalizedUser);
 
     try {
-      claimPendingCheckoutProfile(nextUser);
+      claimPendingCheckoutProfile(normalizedUser);
     } catch (error) {
       console.warn('Failed to sync pending checkout profile:', error);
     }
@@ -106,11 +113,11 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const updateProfile = async ({ name, email }) => {
+  const updateProfile = async (profileFields) => {
     const response = await apiServerClient.fetch('/auth/update-profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email }),
+      body: JSON.stringify(profileFields),
     });
 
     if (!response.ok) {
@@ -122,14 +129,16 @@ export const AuthProvider = ({ children }) => {
     const returnedUser = data?.user || null;
     if (returnedUser || data?.name || data?.email) {
       const nextName = returnedUser
-        ? `${returnedUser.firstName || ''} ${returnedUser.lastName || ''}`.trim() || name
-        : (data.name || name);
-      const nextEmail = returnedUser?.email || data?.email || email;
+        ? `${returnedUser.firstName || ''} ${returnedUser.lastName || ''}`.trim() || profileFields?.name || user?.name
+        : (data.name || profileFields?.name || user?.name);
+      const nextEmail = returnedUser?.email || data?.email || profileFields?.email || user?.email;
 
       applyAuthenticatedUser({
         userId: returnedUser?.userId || data.userId || user?.userId,
         email: nextEmail,
         name: nextName,
+        firstName: returnedUser?.firstName || profileFields?.firstName || user?.firstName || '',
+        lastName: returnedUser?.lastName || profileFields?.lastName || user?.lastName || '',
       });
     }
 

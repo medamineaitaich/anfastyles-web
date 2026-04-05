@@ -13,6 +13,7 @@ import OrderConfirmationPage from './pages/OrderConfirmationPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import SignupPage from './pages/SignupPage.jsx';
 import AccountDashboard from './pages/AccountDashboard.jsx';
+import AccountProfilePage from './pages/AccountProfilePage.jsx';
 import OrderHistoryPage from './pages/OrderHistoryPage.jsx';
 import OrderDetailPage from './pages/OrderDetailPage.jsx';
 import OrderTrackingPage from './pages/OrderTrackingPage.jsx';
@@ -44,6 +45,8 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/account" element={<ProtectedRoute><AccountDashboard /></ProtectedRoute>} />
+          <Route path="/account/profile" element={<ProtectedRoute><AccountProfilePage section="profile" /></ProtectedRoute>} />
+          <Route path="/account/settings" element={<ProtectedRoute><AccountProfilePage section="settings" /></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
           <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
           <Route path="/orders/:id/tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
