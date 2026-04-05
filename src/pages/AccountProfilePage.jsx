@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { countryOptions, getRegionFieldLabel, getRegionOptions, getRegionPlaceholder, normalizeCountryCode } from '@/lib/addressFields.js';
+import { saveCheckoutProfile } from '@/lib/checkoutProfile.js';
 import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
@@ -259,7 +260,7 @@ const AddressSection = ({
 };
 
 const AccountProfilePage = ({ section = 'profile' }) => {
-  const { updateProfile, changePassword, logout } = useAuth();
+  const { user, updateProfile, changePassword, logout } = useAuth();
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
@@ -307,6 +308,20 @@ const AccountProfilePage = ({ section = 'profile' }) => {
     setBillingForm(mapCustomerAddressToForm(data?.billing, billingFallbacks));
     setShippingForm(mapCustomerAddressToForm(data?.shipping, shippingFallbacks));
     setPersistedEmail(nextProfileForm.email);
+
+    if (user?.userId || nextProfileForm.email) {
+      try {
+        saveCheckoutProfile({
+          userId: user?.userId,
+          email: nextProfileForm.email,
+          billingAddress: mapCustomerAddressToForm(data?.billing, billingFallbacks),
+          shippingAddress: mapCustomerAddressToForm(data?.shipping, shippingFallbacks),
+          shippingSameAsBilling: !String(data?.shipping?.address_1 || data?.shipping?.city || data?.shipping?.postcode || '').trim(),
+        });
+      } catch (error) {
+        console.warn('Failed to refresh checkout profile cache from account settings:', error);
+      }
+    }
   };
 
   useEffect(() => {

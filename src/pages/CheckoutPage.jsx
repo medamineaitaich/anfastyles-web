@@ -222,6 +222,28 @@ const mergeAddressFormValues = (currentValues, nextValues = {}) => {
   return merged;
 };
 
+const mapProfileAddressToCheckoutForm = (address = {}, fallbacks = {}) => ({
+  firstName: String(address?.first_name || fallbacks.firstName || '').trim(),
+  lastName: String(address?.last_name || fallbacks.lastName || '').trim(),
+  email: String(address?.email || fallbacks.email || '').trim(),
+  phone: String(address?.phone || fallbacks.phone || '').trim(),
+  address: String(address?.address_1 || fallbacks.address || '').trim(),
+  city: String(address?.city || fallbacks.city || '').trim(),
+  state: String(address?.state || fallbacks.state || '').trim(),
+  zip: String(address?.postcode || fallbacks.zip || '').trim(),
+  country: normalizeCountryCode(address?.country || fallbacks.country || 'US') || 'US',
+});
+
+const addressHasMeaningfulData = (address = {}) => [
+  address?.address,
+  address?.address_1,
+  address?.city,
+  address?.state,
+  address?.zip,
+  address?.postcode,
+  address?.phone,
+].some((value) => String(value || '').trim());
+
 const getAddressErrorKey = (formKey, field) => `${formKey}.${field}`;
 const getAccountErrorKey = (field) => `account.${field}`;
 
@@ -487,38 +509,90 @@ const CheckoutPage = () => {
 
     const nextPrefillKey = String(user.userId || user.email || '');
     if (!nextPrefillKey || profilePrefillKey === nextPrefillKey) return;
+    let cancelled = false;
 
-    let savedProfile = null;
-    try {
-      savedProfile = readCheckoutProfile({ userId: user.userId, email: user.email });
-    } catch (error) {
-      console.warn('Failed to read checkout profile:', error);
-    }
+    const hydrateCheckoutProfile = async () => {
+      let savedProfile = null;
+      try {
+        savedProfile = readCheckoutProfile({ userId: user.userId, email: user.email });
+      } catch (error) {
+        console.warn('Failed to read checkout profile:', error);
+      }
 
-    const nameParts = splitFullName(user.name);
-    const billingDefaults = {
-      firstName: savedProfile?.billing?.firstName || nameParts.firstName,
-      lastName: savedProfile?.billing?.lastName || nameParts.lastName,
-      email: savedProfile?.billing?.email || user.email || '',
-      phone: savedProfile?.billing?.phone || '',
-      address: savedProfile?.billing?.address || '',
-      city: savedProfile?.billing?.city || '',
-      state: savedProfile?.billing?.state || '',
-      zip: savedProfile?.billing?.zip || '',
-      country: savedProfile?.billing?.country || 'US',
+      const nameParts = splitFullName(user.name);
+      let remoteProfile = null;
+
+      try {
+        const response = await apiServerClient.fetch('/auth/me-profile');
+        if (response.ok) {
+          remoteProfile = await response.json();
+        }
+      } catch (error) {
+        console.warn('Failed to load saved account profile for checkout prefill:', error);
+      }
+
+      if (cancelled) return;
+
+      const billingDefaults = remoteProfile
+        ? mapProfileAddressToCheckoutForm(remoteProfile.billing, {
+            firstName: remoteProfile.firstName || nameParts.firstName,
+            lastName: remoteProfile.lastName || nameParts.lastName,
+            email: remoteProfile.email || user.email || '',
+          })
+        : {
+            firstName: savedProfile?.billing?.firstName || nameParts.firstName,
+            lastName: savedProfile?.billing?.lastName || nameParts.lastName,
+            email: savedProfile?.billing?.email || user.email || '',
+            phone: savedProfile?.billing?.phone || '',
+            address: savedProfile?.billing?.address || '',
+            city: savedProfile?.billing?.city || '',
+            state: savedProfile?.billing?.state || '',
+            zip: savedProfile?.billing?.zip || '',
+            country: savedProfile?.billing?.country || 'US',
+          };
+
+      const shippingDefaults = remoteProfile && addressHasMeaningfulData(remoteProfile.shipping)
+        ? mapProfileAddressToCheckoutForm(remoteProfile.shipping, {
+            firstName: remoteProfile.firstName || nameParts.firstName,
+            lastName: remoteProfile.lastName || nameParts.lastName,
+            country: remoteProfile.billing?.country || 'US',
+          })
+        : savedProfile?.shipping || null;
+
+      setBillingData((prev) => mergeAddressFormValues(prev, billingDefaults));
+
+      if (shippingDefaults) {
+        setShippingData((prev) => mergeAddressFormValues(prev, shippingDefaults));
+      }
+
+      if (typeof savedProfile?.shippingSameAsBilling === 'boolean') {
+        setShippingSameAsBilling(savedProfile.shippingSameAsBilling);
+      } else if (remoteProfile) {
+        setShippingSameAsBilling(!addressHasMeaningfulData(remoteProfile.shipping));
+      }
+
+      if (remoteProfile) {
+        try {
+          saveCheckoutProfile({
+            userId: user.userId,
+            email: remoteProfile.email || user.email,
+            billingAddress: billingDefaults,
+            shippingAddress: shippingDefaults || billingDefaults,
+            shippingSameAsBilling: !addressHasMeaningfulData(remoteProfile.shipping),
+          });
+        } catch (error) {
+          console.warn('Failed to refresh checkout profile cache from account profile:', error);
+        }
+      }
+
+      setProfilePrefillKey(nextPrefillKey);
     };
 
-    setBillingData((prev) => mergeAddressFormValues(prev, billingDefaults));
+    hydrateCheckoutProfile();
 
-    if (savedProfile?.shipping) {
-      setShippingData((prev) => mergeAddressFormValues(prev, savedProfile.shipping));
-    }
-
-    if (typeof savedProfile?.shippingSameAsBilling === 'boolean') {
-      setShippingSameAsBilling(savedProfile.shippingSameAsBilling);
-    }
-
-    setProfilePrefillKey(nextPrefillKey);
+    return () => {
+      cancelled = true;
+    };
   }, [authenticated, profilePrefillKey, user]);
 
   useEffect(() => {
