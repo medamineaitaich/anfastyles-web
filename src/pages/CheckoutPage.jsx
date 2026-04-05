@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
+import { countryOptions, getRegionFieldLabel, getRegionOptions, getRegionPlaceholder, normalizeCountryCode } from '@/lib/addressFields.js';
 import { readCheckoutProfile, saveCheckoutProfile } from '@/lib/checkoutProfile.js';
 import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import { normalizeOrderSummary, storeOrderSummary } from '@/lib/orderSummary.js';
@@ -181,87 +182,6 @@ const paymentErrorMessageClassName = 'mt-3 text-sm text-destructive md:mt-4';
 const stickySidebarClassName = 'min-w-0 self-start md:sticky md:top-24';
 const stickySummaryCardClassName = 'rounded-2xl border border-border/60 bg-card p-5 md:max-h-[calc(100vh-7rem)] md:overflow-y-auto md:p-6';
 const stickySummaryActionClassName = 'mt-5 border-t border-border/60 bg-card pt-4 md:sticky md:bottom-0 md:-mx-6 md:px-6 md:pb-1';
-const countryOptions = [
-  { value: 'US', label: 'United States' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'UK', label: 'United Kingdom' },
-];
-const REGION_OPTIONS_BY_COUNTRY = {
-  US: [
-    { value: 'AL', label: 'Alabama' },
-    { value: 'AK', label: 'Alaska' },
-    { value: 'AZ', label: 'Arizona' },
-    { value: 'AR', label: 'Arkansas' },
-    { value: 'CA', label: 'California' },
-    { value: 'CO', label: 'Colorado' },
-    { value: 'CT', label: 'Connecticut' },
-    { value: 'DE', label: 'Delaware' },
-    { value: 'DC', label: 'District of Columbia' },
-    { value: 'FL', label: 'Florida' },
-    { value: 'GA', label: 'Georgia' },
-    { value: 'HI', label: 'Hawaii' },
-    { value: 'ID', label: 'Idaho' },
-    { value: 'IL', label: 'Illinois' },
-    { value: 'IN', label: 'Indiana' },
-    { value: 'IA', label: 'Iowa' },
-    { value: 'KS', label: 'Kansas' },
-    { value: 'KY', label: 'Kentucky' },
-    { value: 'LA', label: 'Louisiana' },
-    { value: 'ME', label: 'Maine' },
-    { value: 'MD', label: 'Maryland' },
-    { value: 'MA', label: 'Massachusetts' },
-    { value: 'MI', label: 'Michigan' },
-    { value: 'MN', label: 'Minnesota' },
-    { value: 'MS', label: 'Mississippi' },
-    { value: 'MO', label: 'Missouri' },
-    { value: 'MT', label: 'Montana' },
-    { value: 'NE', label: 'Nebraska' },
-    { value: 'NV', label: 'Nevada' },
-    { value: 'NH', label: 'New Hampshire' },
-    { value: 'NJ', label: 'New Jersey' },
-    { value: 'NM', label: 'New Mexico' },
-    { value: 'NY', label: 'New York' },
-    { value: 'NC', label: 'North Carolina' },
-    { value: 'ND', label: 'North Dakota' },
-    { value: 'OH', label: 'Ohio' },
-    { value: 'OK', label: 'Oklahoma' },
-    { value: 'OR', label: 'Oregon' },
-    { value: 'PA', label: 'Pennsylvania' },
-    { value: 'RI', label: 'Rhode Island' },
-    { value: 'SC', label: 'South Carolina' },
-    { value: 'SD', label: 'South Dakota' },
-    { value: 'TN', label: 'Tennessee' },
-    { value: 'TX', label: 'Texas' },
-    { value: 'UT', label: 'Utah' },
-    { value: 'VT', label: 'Vermont' },
-    { value: 'VA', label: 'Virginia' },
-    { value: 'WA', label: 'Washington' },
-    { value: 'WV', label: 'West Virginia' },
-    { value: 'WI', label: 'Wisconsin' },
-    { value: 'WY', label: 'Wyoming' },
-  ],
-  CA: [
-    { value: 'AB', label: 'Alberta' },
-    { value: 'BC', label: 'British Columbia' },
-    { value: 'MB', label: 'Manitoba' },
-    { value: 'NB', label: 'New Brunswick' },
-    { value: 'NL', label: 'Newfoundland and Labrador' },
-    { value: 'NT', label: 'Northwest Territories' },
-    { value: 'NS', label: 'Nova Scotia' },
-    { value: 'NU', label: 'Nunavut' },
-    { value: 'ON', label: 'Ontario' },
-    { value: 'PE', label: 'Prince Edward Island' },
-    { value: 'QC', label: 'Quebec' },
-    { value: 'SK', label: 'Saskatchewan' },
-    { value: 'YT', label: 'Yukon' },
-  ],
-};
-
-const normalizeCountryCode = (value) => String(value || '').trim().toUpperCase();
-const getRegionOptions = (country) => REGION_OPTIONS_BY_COUNTRY[normalizeCountryCode(country)] || null;
-const getRegionFieldLabel = (country) => (normalizeCountryCode(country) === 'CA' ? 'Province' : 'State');
-const getRegionPlaceholder = (country) => (normalizeCountryCode(country) === 'CA' ? 'Select a province' : 'Select a state');
-
 const createAddressFormState = (overrides = {}) => ({
   firstName: '',
   lastName: '',
