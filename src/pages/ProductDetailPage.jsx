@@ -148,7 +148,42 @@ const sanitizeDescriptionHtml = (value) => {
 
   const parser = new DOMParser();
   const doc = parser.parseFromString(value, 'text/html');
-  const allowedTags = new Set(['p', 'br', 'ul', 'ol', 'li', 'strong', 'em', 'b', 'i', 'a']);
+  const allowedTags = new Set([
+    'p',
+    'br',
+    'ul',
+    'ol',
+    'li',
+    'strong',
+    'em',
+    'b',
+    'i',
+    'a',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'hr',
+    'blockquote',
+    'table',
+    'thead',
+    'tbody',
+    'tfoot',
+    'tr',
+    'th',
+    'td',
+    'caption',
+    'colgroup',
+    'col',
+  ]);
+  const allowedAttributes = new Map([
+    ['a', new Set(['href'])],
+    ['th', new Set(['colspan', 'rowspan', 'scope'])],
+    ['td', new Set(['colspan', 'rowspan'])],
+    ['col', new Set(['span'])],
+  ]);
   const elementNode = 1;
   const commentNode = 8;
 
@@ -174,9 +209,21 @@ const sanitizeDescriptionHtml = (value) => {
       }
 
       for (const attribute of [...child.attributes]) {
-        if (tagName === 'a' && attribute.name === 'href') {
+        const attrName = attribute.name.toLowerCase();
+        const allowedForTag = allowedAttributes.get(tagName);
+
+        if (tagName === 'a' && attrName === 'href') {
           const href = attribute.value.trim();
           if (/^(https?:|mailto:|tel:|#)/i.test(href)) continue;
+        }
+
+        if (allowedForTag && allowedForTag.has(attrName)) {
+          if (attrName === 'colspan' || attrName === 'rowspan' || attrName === 'span') {
+            const numericValue = Number.parseInt(attribute.value, 10);
+            if (Number.isInteger(numericValue) && numericValue > 0) continue;
+          } else {
+            continue;
+          }
         }
 
         child.removeAttribute(attribute.name);
@@ -968,10 +1015,12 @@ const ProductDetailPage = () => {
             <section className="order-4 min-w-0 md:col-start-2 lg:pr-4">
               <div className="max-w-prose">
                 {descriptionExpanded ? (
-                  <div
-                    className="space-y-4 leading-relaxed text-muted-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
-                    dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
-                  />
+                  <div className="overflow-x-auto">
+                    <div
+                      className="space-y-4 leading-relaxed text-muted-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-2 [&_blockquote]:border-border/60 [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground [&_caption]:text-left [&_caption]:text-sm [&_caption]:text-muted-foreground [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:text-foreground [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-foreground [&_h5]:text-sm [&_h5]:font-semibold [&_h5]:text-foreground [&_h6]:text-sm [&_h6]:font-semibold [&_h6]:text-foreground [&_hr]:border-border/60 [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-4 [&_strong]:font-semibold [&_table]:w-full [&_table]:min-w-[520px] [&_table]:border-collapse [&_table]:text-sm [&_td]:border [&_td]:border-border/60 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_th]:border [&_th]:border-border/60 [&_th]:bg-muted/40 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
+                      dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
+                    />
+                  </div>
                 ) : (
                   <p
                     className="leading-relaxed text-muted-foreground"
