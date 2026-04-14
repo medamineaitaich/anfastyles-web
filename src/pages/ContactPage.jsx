@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
 import apiServerClient from '@/lib/apiServerClient';
+import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -17,15 +19,20 @@ const ContactPage = () => {
     email: '',
     subject: '',
     orderNumber: '',
-    message: ''
+    message: '',
+    website: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (successMessage) {
+      setSuccessMessage('');
+    }
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -36,8 +43,11 @@ const ContactPage = () => {
 
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!formData.subject.trim()) newErrors.subject = 'Subject is required';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!EMAIL_REGEX.test(formData.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
     if (!formData.message.trim()) newErrors.message = 'Message is required';
 
     if (Object.keys(newErrors).length > 0) {
@@ -47,21 +57,29 @@ const ContactPage = () => {
 
     setLoading(true);
     try {
-      const response = await apiServerClient.fetch('/contact/submit', {
+      const response = await apiServerClient.fetch('/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 
+      const responseData = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Submission failed');
+        if (responseData?.errors && typeof responseData.errors === 'object') {
+          setErrors((prev) => ({ ...prev, ...responseData.errors }));
+        }
+
+        throw new Error(responseData.error || 'Submission failed');
       }
 
-      toast.success('Message sent successfully');
-      setFormData({ name: '', email: '', subject: '', orderNumber: '', message: '' });
+      const message = responseData?.message || 'Your message has been sent successfully. We will get back to you soon.';
+      setSuccessMessage(message);
+      notifySuccess('Message sent', message);
+      setFormData({ name: '', email: '', subject: '', orderNumber: '', message: '', website: '' });
+      setErrors({});
     } catch (error) {
-      toast.error(error.message || 'Failed to send message');
+      notifyError('Unable to send message', error.message || 'Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -113,6 +131,12 @@ const ContactPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-8 max-w-2xl mx-auto">
+            {successMessage && (
+              <div className="mb-6 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+                {successMessage}
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div>
                 <Label htmlFor="name">Name *</Label>
@@ -121,7 +145,7 @@ const ContactPage = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={errors.name ? 'border-destructive' : ''}
+                  aria-invalid={errors.name ? 'true' : undefined}
                 />
                 {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
               </div>
@@ -134,7 +158,7 @@ const ContactPage = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={errors.email ? 'border-destructive' : ''}
+                  aria-invalid={errors.email ? 'true' : undefined}
                 />
                 {errors.email && <p className="text-sm text-destructive mt-1">{errors.email}</p>}
               </div>
@@ -148,7 +172,7 @@ const ContactPage = () => {
                   name="subject"
                   value={formData.subject}
                   onChange={handleInputChange}
-                  className={errors.subject ? 'border-destructive' : ''}
+                  aria-invalid={errors.subject ? 'true' : undefined}
                 />
                 {errors.subject && <p className="text-sm text-destructive mt-1">{errors.subject}</p>}
               </div>
@@ -172,9 +196,21 @@ const ContactPage = () => {
                 rows={6}
                 value={formData.message}
                 onChange={handleInputChange}
-                className={errors.message ? 'border-destructive' : ''}
+                aria-invalid={errors.message ? 'true' : undefined}
               />
               {errors.message && <p className="text-sm text-destructive mt-1">{errors.message}</p>}
+            </div>
+
+            <div className="hidden" aria-hidden="true">
+              <Label htmlFor="website">Website</Label>
+              <Input
+                id="website"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                value={formData.website}
+                onChange={handleInputChange}
+              />
             </div>
 
             <Button type="submit" disabled={loading} size="lg" className="w-full">
