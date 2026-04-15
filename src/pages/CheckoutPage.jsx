@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useCart } from '@/contexts/CartContext.jsx';
 import apiServerClient from '@/lib/apiServerClient';
 import { countryOptions, getRegionFieldLabel, getRegionOptions, getRegionPlaceholder, normalizeCountryCode } from '@/lib/addressFields.js';
 import { readCheckoutProfile, saveCheckoutProfile } from '@/lib/checkoutProfile.js';
@@ -447,7 +448,7 @@ const normalizePaymentMethods = (methods) => {
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user, authenticated, verifySession } = useAuth();
-  const [cart, setCart] = useState({ items: [], subtotal: 0 });
+  const { cart, loading: cartLoading, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState(['stripe']);
@@ -497,12 +498,11 @@ const CheckoutPage = () => {
   }, []);
 
   useEffect(() => {
-    const savedCart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"subtotal":0}');
-    if (savedCart.items.length === 0) {
+    if (cartLoading) return;
+    if (cart.items.length === 0) {
       navigate('/cart');
     }
-    setCart(savedCart);
-  }, [navigate]);
+  }, [cart.items.length, cartLoading, navigate]);
 
   useEffect(() => {
     if (!authenticated || !user) return;
@@ -1138,12 +1138,14 @@ const CheckoutPage = () => {
         }
       };
 
-      const completeSuccessfulCheckout = (orderSummary) => {
+      const completeSuccessfulCheckout = async (orderSummary) => {
         syncCheckoutProfileState();
         storeOrderSummary(orderSummary);
-
-        localStorage.setItem('anfaCart', JSON.stringify({ items: [], subtotal: 0, itemCount: 0 }));
-        window.dispatchEvent(new Event('cartUpdated'));
+        try {
+          await clearCart();
+        } catch (cartError) {
+          console.error('Unable to clear cart after checkout:', cartError);
+        }
 
         navigate(`/order-confirmation?orderId=${orderSummary.orderId}&orderNumber=${orderSummary.orderNumber}`, {
           state: { orderSummary },
@@ -1217,7 +1219,7 @@ const CheckoutPage = () => {
           date: checkoutData.date_created || new Date().toISOString(),
         }, fallbackOrderSummary);
 
-        completeSuccessfulCheckout(orderSummary);
+        await completeSuccessfulCheckout(orderSummary);
       };
 
       const createCheckoutBody = (paymentMethod, paymentDataEntries, needsShipping = false) => ({
@@ -1439,7 +1441,7 @@ const CheckoutPage = () => {
         paymentMethod: paymentMethodGateway,
       });
 
-      completeSuccessfulCheckout(orderSummary);
+      await completeSuccessfulCheckout(orderSummary);
     } catch (error) {
       console.error('Order creation error:', error);
       notifyError('Checkout failed', error.message || 'Failed to place order');
@@ -1474,6 +1476,7 @@ const CheckoutPage = () => {
     || (formData.paymentMethod === 'woocommerce_payments' && wooPaymentsConfigError ? (wooPaymentsConfigError || 'WooPayments is unavailable.') : '');
 
   const placeOrderDisabled = loading
+    || cartLoading
     || paymentMethodsLoading
     || cart.items.length === 0
     || !formData.paymentMethod

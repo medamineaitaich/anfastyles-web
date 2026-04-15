@@ -1,6 +1,7 @@
 import React from 'react';
 import { Route, Routes, BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext.jsx';
+import { CartProvider } from './contexts/CartContext.jsx';
 import { Toaster } from '@/components/ui/sonner';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
@@ -31,36 +32,38 @@ import NotFoundPage from './pages/NotFoundPage.jsx';
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/shop" element={<ShopPage />} />
-          <Route path="/product/:id" element={<ProductDetailPage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/account" element={<ProtectedRoute><AccountDashboard /></ProtectedRoute>} />
-          <Route path="/account/profile" element={<ProtectedRoute><AccountProfilePage section="profile" /></ProtectedRoute>} />
-          <Route path="/account/settings" element={<ProtectedRoute><AccountProfilePage section="settings" /></ProtectedRoute>} />
-          <Route path="/orders" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
-          <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
-          <Route path="/orders/:id/tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/faq" element={<FAQPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/refund-policy" element={<RefundPolicyPage />} />
-          <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-        <Toaster />
-      </Router>
+      <CartProvider>
+        <Router>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/shop" element={<ShopPage />} />
+            <Route path="/product/:id" element={<ProductDetailPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/account" element={<ProtectedRoute><AccountDashboard /></ProtectedRoute>} />
+            <Route path="/account/profile" element={<ProtectedRoute><AccountProfilePage section="profile" /></ProtectedRoute>} />
+            <Route path="/account/settings" element={<ProtectedRoute><AccountProfilePage section="settings" /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
+            <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
+            <Route path="/orders/:id/tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/refund-policy" element={<RefundPolicyPage />} />
+            <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+          <Toaster />
+        </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

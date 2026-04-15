@@ -1,4 +1,7 @@
+import apiServerClient from '@/lib/apiServerClient';
+
 export const CART_STORAGE_KEY = 'anfaCart';
+export const CART_UPDATED_EVENT = 'cartUpdated';
 
 export const EMPTY_CART = {
   items: [],
@@ -104,25 +107,113 @@ export const normalizeCart = (cart = EMPTY_CART) => {
   };
 };
 
+export const emitCartUpdated = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(CART_UPDATED_EVENT));
+  }
+};
+
 export const readCartFromStorage = () => {
+  if (typeof window === 'undefined') return EMPTY_CART;
+
   try {
-    const rawCart = localStorage.getItem(CART_STORAGE_KEY);
+    const rawCart = window.localStorage.getItem(CART_STORAGE_KEY);
     const parsedCart = rawCart ? JSON.parse(rawCart) : EMPTY_CART;
     const normalizedCart = normalizeCart(parsedCart);
 
     if (JSON.stringify(parsedCart) !== JSON.stringify(normalizedCart)) {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedCart));
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedCart));
     }
 
     return normalizedCart;
-  } catch (error) {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(EMPTY_CART));
+  } catch {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(EMPTY_CART));
     return EMPTY_CART;
   }
 };
 
 export const writeCartToStorage = (cart) => {
+  if (typeof window === 'undefined') return normalizeCart(cart);
+
   const normalizedCart = normalizeCart(cart);
-  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedCart));
+  window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(normalizedCart));
   return normalizedCart;
 };
+
+export const clearCartStorage = () => writeCartToStorage(EMPTY_CART);
+
+const parseJsonResponse = async (response) => {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
+const getResponseErrorMessage = (payload, fallback) => (
+  payload?.error
+  || payload?.message
+  || fallback
+);
+
+const requestAccountCart = async (path, init = {}, fallbackMessage = 'Cart request failed') => {
+  const response = await apiServerClient.fetch(path, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+    ...init,
+  });
+
+  const payload = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(getResponseErrorMessage(payload, fallbackMessage));
+  }
+
+  return normalizeCart(payload?.cart || EMPTY_CART);
+};
+
+export const fetchAccountCart = () => (
+  requestAccountCart('/cart/account', { method: 'GET' }, 'Unable to load your cart')
+);
+
+export const saveAccountCart = (cart) => (
+  requestAccountCart('/cart/account', {
+    method: 'PUT',
+    body: JSON.stringify({ cart: normalizeCart(cart) }),
+  }, 'Unable to save your cart')
+);
+
+export const mergeAccountCart = (cart) => (
+  requestAccountCart('/cart/account/merge', {
+    method: 'POST',
+    body: JSON.stringify({ cart: normalizeCart(cart) }),
+  }, 'Unable to merge your cart')
+);
+
+export const addAccountCartItem = (item) => (
+  requestAccountCart('/cart/account/items', {
+    method: 'POST',
+    body: JSON.stringify({ item: normalizeCart({ items: [item] }).items[0] || item }),
+  }, 'Unable to add this item to your cart')
+);
+
+export const updateAccountCartItem = (lineKey, quantity) => (
+  requestAccountCart(`/cart/account/items/${encodeURIComponent(lineKey)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ quantity }),
+  }, 'Unable to update this cart item')
+);
+
+export const removeAccountCartItem = (lineKey) => (
+  requestAccountCart(`/cart/account/items/${encodeURIComponent(lineKey)}`, {
+    method: 'DELETE',
+  }, 'Unable to remove this cart item')
+);
+
+export const clearAccountCart = () => (
+  requestAccountCart('/cart/account', {
+    method: 'DELETE',
+  }, 'Unable to clear your cart')
+);

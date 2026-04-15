@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, User, Menu, Leaf } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useCart } from '@/contexts/CartContext.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -10,18 +11,12 @@ const Header = ({ onCartClick }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { authenticated } = useAuth();
-  const [cartCount, setCartCount] = useState(0);
+  const { cart } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [desktopSearchOpen, setDesktopSearchOpen] = useState(false);
   const desktopSearchRef = useRef(null);
   const desktopSearchInputRef = useRef(null);
-
-  useEffect(() => {
-    updateCartCount();
-    window.addEventListener('cartUpdated', updateCartCount);
-    return () => window.removeEventListener('cartUpdated', updateCartCount);
-  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -56,11 +51,6 @@ const Header = ({ onCartClick }) => {
       document.removeEventListener('keydown', handleEscape);
     };
   }, [desktopSearchOpen]);
-
-  const updateCartCount = () => {
-    const cart = JSON.parse(localStorage.getItem('anfaCart') || '{"items":[],"itemCount":0}');
-    setCartCount(cart.itemCount || 0);
-  };
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
@@ -158,9 +148,9 @@ const Header = ({ onCartClick }) => {
               onClick={onCartClick}
             >
               <ShoppingCart className="w-5 h-5" />
-              {cartCount > 0 && (
+              {cart.itemCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {cartCount}
+                  {cart.itemCount}
                 </span>
               )}
             </Button>

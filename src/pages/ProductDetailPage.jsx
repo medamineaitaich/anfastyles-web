@@ -5,7 +5,8 @@ import { Minus, Plus, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import apiServerClient from '@/lib/apiServerClient';
-import { getCartLineKey, readCartFromStorage, writeCartToStorage } from '@/lib/cart';
+import { getCartLineKey } from '@/lib/cart';
+import { useCart } from '@/contexts/CartContext.jsx';
 import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
@@ -449,6 +450,7 @@ const ProductDetailPage = () => {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [selectionErrorVisible, setSelectionErrorVisible] = useState(false);
+  const { cart, addItem } = useCart();
 
   const formatPrice = (value) => {
     const n = Number(value);
@@ -683,7 +685,7 @@ const ProductDetailPage = () => {
     setSelectionErrorVisible(false);
   };
 
-  const addToCart = () => {
+  const addToCart = async () => {
     if (!product || !canAddToCart) {
       setSelectionErrorVisible(Boolean(hasRealVariationData));
       notifyError(
@@ -695,7 +697,6 @@ const ProductDetailPage = () => {
       return;
     }
 
-    const cart = readCartFromStorage();
     const cartLineKey = getCartLineKey({
       productId: product.id,
       variationId: selectedVariation?.id || null,
@@ -704,21 +705,19 @@ const ProductDetailPage = () => {
     });
     const itemPrice = parseFloat(displayPrice);
     const itemImage = images[selectedImage] || images[0] || 'https://images.unsplash.com/photo-1618815909724-861120595390';
+    const existingItem = cart.items.find((item) => item.lineKey === cartLineKey);
+    const existingQuantity = Number(existingItem?.quantity) || 0;
+    const nextQuantity = Math.min(existingQuantity + quantity, maxQuantity);
+    const quantityToAdd = nextQuantity - existingQuantity;
 
-    const existingItemIndex = cart.items.findIndex((item) => item.lineKey === cartLineKey);
+    if (quantityToAdd < 1) {
+      setSelectionErrorVisible(false);
+      setCartDrawerOpen(true);
+      return;
+    }
 
-    if (existingItemIndex > -1) {
-      const existingQuantity = Number(cart.items[existingItemIndex].quantity) || 0;
-      const nextQuantity = Math.min(existingQuantity + quantity, maxQuantity);
-      cart.items[existingItemIndex] = {
-        ...cart.items[existingItemIndex],
-        lineKey: cartLineKey,
-        quantity: nextQuantity,
-        price: itemPrice,
-        image: itemImage,
-      };
-    } else {
-      cart.items.push({
+    try {
+      await addItem({
         lineKey: cartLineKey,
         productId: product.id,
         variationId: selectedVariation?.id || null,
@@ -726,21 +725,20 @@ const ProductDetailPage = () => {
         name: product.name,
         price: itemPrice,
         image: itemImage,
-        quantity,
+        quantity: quantityToAdd,
         size: selectedSize,
         color: selectedColor,
       });
+      setSelectionErrorVisible(false);
+      notifySuccess('Added to cart', {
+        description: `${product.name} is ready in your cart.`,
+        id: ADD_TO_CART_TOAST_ID,
+        duration: 2200,
+      });
+      setCartDrawerOpen(true);
+    } catch (error) {
+      notifyError('Unable to add this item', error.message || 'Please try again.');
     }
-
-    writeCartToStorage(cart);
-    window.dispatchEvent(new Event('cartUpdated'));
-    setSelectionErrorVisible(false);
-    notifySuccess('Added to cart', {
-      description: `${product.name} is ready in your cart.`,
-      id: ADD_TO_CART_TOAST_ID,
-      duration: 2200,
-    });
-    setCartDrawerOpen(true);
   };
 
   const descriptionSource = product?.description || FALLBACK_DESCRIPTION;

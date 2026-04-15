@@ -1,46 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { readCartFromStorage, writeCartToStorage } from '@/lib/cart';
-import { notifyInfo } from '@/lib/notifications.js';
+import { useCart } from '@/contexts/CartContext.jsx';
+import { notifyError, notifyInfo } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
 const CartPage = () => {
-  const [cart, setCart] = useState({ items: [], subtotal: 0, itemCount: 0 });
+  const { cart, loading: cartLoading, updateItemQuantity, removeItem: removeCartItem } = useCart();
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  const loadCart = () => {
-    const savedCart = readCartFromStorage();
-    setCart(savedCart);
-  };
-
-  const updateQuantity = (lineKey, newQuantity) => {
+  const updateQuantity = async (lineKey, newQuantity) => {
     if (newQuantity < 1) return;
-    
-    const updatedItems = cart.items.map(item =>
-      item.lineKey === lineKey ? { ...item, quantity: newQuantity } : item
-    );
-    
-    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
-    setCart(updatedCart);
-    window.dispatchEvent(new Event('cartUpdated'));
+    try {
+      await updateItemQuantity(lineKey, newQuantity);
+    } catch (error) {
+      notifyError('Unable to update cart', error.message || 'Please try again.');
+    }
   };
 
-  const removeItem = (lineKey) => {
+  const removeItem = async (lineKey) => {
     const removedItem = cart.items.find((item) => item.lineKey === lineKey);
-    const updatedItems = cart.items.filter(item => item.lineKey !== lineKey);
-    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
-    setCart(updatedCart);
-    window.dispatchEvent(new Event('cartUpdated'));
+    try {
+      await removeCartItem(lineKey);
+    } catch (error) {
+      notifyError('Unable to remove item', error.message || 'Please try again.');
+      return;
+    }
 
     if (removedItem) {
       notifyInfo('Item removed', `${removedItem.name} was removed from your cart.`);
@@ -69,6 +59,12 @@ const CartPage = () => {
           </h1>
 
           {cart.items.length === 0 ? (
+            cartLoading ? (
+              <div className="text-center py-20">
+                <h2 className="text-2xl font-bold mb-3">Loading your cart...</h2>
+                <p className="text-muted-foreground">Please wait a moment.</p>
+              </div>
+            ) : (
             <div className="text-center py-20">
               <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-6">
                 <ShoppingBag className="w-10 h-10 text-muted-foreground" />
@@ -79,6 +75,7 @@ const CartPage = () => {
                 <Button size="lg">Continue shopping</Button>
               </Link>
             </div>
+            )
           ) : (
             <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_320px] md:items-start md:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="min-w-0">

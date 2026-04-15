@@ -1,42 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { X, Minus, Plus, Trash2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { readCartFromStorage, writeCartToStorage } from '@/lib/cart';
+import { useCart } from '@/contexts/CartContext.jsx';
+import { notifyError } from '@/lib/notifications.js';
 
 const CartDrawer = ({ open, onClose }) => {
-  const [cart, setCart] = useState({ items: [], subtotal: 0, itemCount: 0 });
+  const { cart, loading, updateItemQuantity, removeItem } = useCart();
 
-  useEffect(() => {
-    if (open) {
-      loadCart();
-    }
-  }, [open]);
-
-  const loadCart = () => {
-    const savedCart = readCartFromStorage();
-    setCart(savedCart);
-  };
-
-  const updateQuantity = (lineKey, newQuantity) => {
+  const updateQuantity = async (lineKey, newQuantity) => {
     if (newQuantity < 1) return;
-    
-    const updatedItems = cart.items.map(item =>
-      item.lineKey === lineKey ? { ...item, quantity: newQuantity } : item
-    );
-    
-    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
-    setCart(updatedCart);
-    window.dispatchEvent(new Event('cartUpdated'));
-  };
-
-  const removeItem = (lineKey) => {
-    const updatedItems = cart.items.filter(item => item.lineKey !== lineKey);
-    const updatedCart = writeCartToStorage({ ...cart, items: updatedItems });
-    setCart(updatedCart);
-    window.dispatchEvent(new Event('cartUpdated'));
+    try {
+      await updateItemQuantity(lineKey, newQuantity);
+    } catch (error) {
+      notifyError('Unable to update cart', error.message || 'Please try again.');
+    }
   };
 
   return (
@@ -46,7 +26,12 @@ const CartDrawer = ({ open, onClose }) => {
           <SheetTitle>Shopping cart</SheetTitle>
         </SheetHeader>
 
-        {cart.items.length === 0 ? (
+        {loading ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
+            <h3 className="text-lg font-semibold mb-2">Loading your cart...</h3>
+            <p className="text-sm text-muted-foreground">Please wait a moment.</p>
+          </div>
+        ) : cart.items.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <X className="w-8 h-8 text-muted-foreground" />
@@ -107,7 +92,13 @@ const CartDrawer = ({ open, onClose }) => {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => removeItem(item.lineKey)}
+                        onClick={async () => {
+                          try {
+                            await removeItem(item.lineKey);
+                          } catch (error) {
+                            notifyError('Unable to remove item', error.message || 'Please try again.');
+                          }
+                        }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
