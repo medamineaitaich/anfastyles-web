@@ -71,7 +71,7 @@ export const getCartLineKey = (item = {}) => {
 
 const normalizeCartItem = (item = {}) => ({
   ...item,
-  lineKey: getCartLineKey(item),
+  lineKey: String(item?.lineKey || '').trim() || getCartLineKey(item),
   price: Number.parseFloat(item.price) || 0,
   quantity: Math.max(1, Number(item.quantity) || 1),
 });
