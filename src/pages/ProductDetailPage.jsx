@@ -12,6 +12,7 @@ import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 import ProductRatingStars from '@/components/ProductRatingStars.jsx';
+import SizeGuideDialog from '@/components/SizeGuideDialog.jsx';
 
 const FALLBACK_DESCRIPTION = 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.';
 const DESCRIPTION_PREVIEW_LENGTH = 220;
@@ -934,7 +935,10 @@ const ProductDetailPage = () => {
 
                   {sizeOptions.length > 0 && (
                     <div>
-                      <label className={`mb-2 block text-sm font-semibold ${selectionErrorVisible && !selectedSize ? 'text-destructive' : ''}`}>Size</label>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <label className={`block text-sm font-semibold ${selectionErrorVisible && !selectedSize ? 'text-destructive' : ''}`}>Size</label>
+                        <SizeGuideDialog />
+                      </div>
                       <div className={`flex flex-wrap gap-2 rounded-xl transition-colors ${selectionErrorVisible && !selectedSize ? 'border border-destructive/40 bg-destructive/5 p-2' : ''}`}>
                         {sizeOptions.map((option) => {
                           const isSelected = selectedSize === option.label;
