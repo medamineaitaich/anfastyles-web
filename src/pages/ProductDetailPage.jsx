@@ -494,11 +494,22 @@ const ProductDetailPage = () => {
     try {
       const productId = currentProduct?.id;
       const category = getCategoryFilterValue(currentProduct);
+      const TARGET_COUNT = 12;
+      const POOL_SIZE = 36;
+
+      const shuffle = (items) => {
+        const copy = [...items];
+        for (let i = copy.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+      };
 
       const buildPath = (categoryValue) => {
         const params = new URLSearchParams({
           page: '1',
-          perPage: '8',
+          perPage: String(POOL_SIZE),
           sort: 'popularity',
         });
 
@@ -515,21 +526,25 @@ const ProductDetailPage = () => {
         return products.filter((item) => item?.id != null && item.id !== productId);
       };
 
-      let products = category ? await readProducts(buildPath(category)) : [];
+      const categoryProducts = category ? await readProducts(buildPath(category)) : [];
+      const fallbackProducts = await readProducts(buildPath(null));
+      const seenIds = new Set();
+      const merged = [];
 
-      if (products.length < 4) {
-        const fallbackProducts = await readProducts(buildPath(null));
-        const seenIds = new Set(products.map((item) => item.id));
-
-        for (const item of fallbackProducts) {
-          if (products.length >= 4) break;
+      const pushUnique = (items) => {
+        for (const item of items) {
+          if (!item?.id) continue;
+          if (item.id === productId) continue;
           if (seenIds.has(item.id)) continue;
-          products.push(item);
           seenIds.add(item.id);
+          merged.push(item);
         }
-      }
+      };
 
-      setRelatedProducts(products.slice(0, 4));
+      pushUnique(categoryProducts);
+      pushUnique(fallbackProducts);
+
+      setRelatedProducts(shuffle(merged).slice(0, TARGET_COUNT));
     } catch (error) {
       console.error('Error fetching related products:', error);
       setRelatedProducts([]);

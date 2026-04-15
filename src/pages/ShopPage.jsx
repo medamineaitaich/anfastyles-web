@@ -17,6 +17,7 @@ import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 const DEFAULT_CATEGORY = 'all';
 const DEFAULT_SORT = 'popularity';
 const DEFAULT_PAGE = 1;
+const DEFAULT_PER_PAGE = 30;
 const VALID_CATEGORIES = new Set(['all', 'apparel', 'accessories', 'home']);
 const VALID_SORTS = new Set(['popularity', 'newest', 'price_asc', 'price_desc']);
 
@@ -87,7 +88,7 @@ const ShopPage = () => {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        perPage: '12',
+        perPage: String(DEFAULT_PER_PAGE),
         sort
       });
 
@@ -111,7 +112,7 @@ const ShopPage = () => {
         setTotalPages(apiTotalPages);
       } else {
         const total = Number(data.total) || nextProducts.length || 0;
-        setTotalPages(Math.max(1, Math.ceil(total / 12)));
+        setTotalPages(Math.max(1, Math.ceil(total / DEFAULT_PER_PAGE)));
       }
     } catch (error) {
       console.error('Error fetching products:', error);
