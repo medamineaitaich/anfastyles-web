@@ -163,10 +163,6 @@ const CartPage = () => {
                         {shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tax (estimated)</span>
-                      <span className="font-semibold font-variant-tabular">${tax.toFixed(2)}</span>
-                    </div>
                   </div>
 
                   <Separator className="my-4" />

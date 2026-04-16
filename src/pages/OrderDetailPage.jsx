@@ -216,10 +216,6 @@ const OrderDetailPage = () => {
                 <span className="text-muted-foreground">Shipping</span>
                 <span className="font-variant-tabular">{formatCurrency(order.shippingTotal)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax</span>
-                <span className="font-variant-tabular">{formatCurrency(order.taxTotal)}</span>
-              </div>
               <Separator className="my-2" />
               <div className="flex justify-between font-bold">
                 <span>Total</span>
