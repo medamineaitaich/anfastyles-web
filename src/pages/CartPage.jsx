@@ -37,7 +37,7 @@ const CartPage = () => {
     }
   };
 
-  const shippingCost = cart.subtotal >= 75 ? 0 : 10;
+  const shippingCost = cart.subtotal >= 75 ? 0 : 5;
   const tax = cart.subtotal * 0.08;
   const total = cart.subtotal + shippingCost + tax;
   const freeShippingProgress = Math.min((cart.subtotal / 75) * 100, 100);

@@ -44,7 +44,7 @@ const EXPRESS_SHIPPING_PATTERN = /express|expedited|priority|overnight|next[\s-]
 const SHIPPING_METHOD_META = {
   standard: {
     label: 'Standard shipping',
-    fallbackCost: (subtotal) => (subtotal >= 75 ? 0 : 10),
+    fallbackCost: (subtotal) => (subtotal >= 75 ? 0 : 5),
   },
 };
 
