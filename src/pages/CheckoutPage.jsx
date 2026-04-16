@@ -1448,8 +1448,8 @@ const CheckoutPage = () => {
 
   const subtotal = Number(cart?.subtotal) || 0;
   const shippingCost = useMemo(() => getShippingFallbackCost(formData.shippingMethod, subtotal), [formData.shippingMethod, subtotal]);
-  const tax = subtotal * 0.08;
-  const total = subtotal + shippingCost + tax;
+  const tax = 0;
+  const total = subtotal + shippingCost;
   const wooPaymentsElementsOptions = useMemo(() => {
     if (!wooPaymentsConfig?.config?.publishableKey) return null;
 
