@@ -27,7 +27,7 @@ const FAQPage = () => {
     },
     {
       question: 'How long does shipping take?',
-      answer: 'Standard shipping takes 5-7 business days within the US. Express shipping (2-3 business days) is available for an additional fee. International orders typically arrive within 10-14 business days.'
+      answer: 'Standard shipping takes 5-7 business days within the US. International orders typically arrive within 10-14 business days.'
     },
     {
       question: 'What materials do you use?',

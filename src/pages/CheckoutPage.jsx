@@ -46,10 +46,6 @@ const SHIPPING_METHOD_META = {
     label: 'Standard shipping',
     fallbackCost: (subtotal) => (subtotal >= 75 ? 0 : 10),
   },
-  express: {
-    label: 'Express shipping',
-    fallbackCost: () => 25,
-  },
 };
 
 const getPaymentMethodLabel = (method) => PAYMENT_METHOD_META[method]?.label || String(method || '')
@@ -1699,17 +1695,6 @@ const CheckoutPage = () => {
                         <span className="font-semibold shrink-0">
                           {getShippingFallbackCost('standard', subtotal) === 0 ? 'Free' : `$${getShippingFallbackCost('standard', subtotal).toFixed(2)}`}
                         </span>
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3 border-t border-border/60 px-4 py-3.5 sm:items-center">
-                        <div className="flex min-w-0 items-start gap-3 sm:items-center">
-                          <RadioGroupItem value="express" id="express" />
-                          <Label htmlFor="express" className="cursor-pointer break-words">
-                            <p className="font-semibold">Express shipping</p>
-                            <p className="text-sm text-muted-foreground">2-3 business days</p>
-                          </Label>
-                        </div>
-                        <span className="font-semibold shrink-0">$25.00</span>
                       </div>
                     </div>
                   </RadioGroup>
