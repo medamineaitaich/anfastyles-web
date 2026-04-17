@@ -1757,11 +1757,10 @@ const CheckoutPage = () => {
                         >
                           <StripeElementsBridge onChange={handleStripeContextChange} />
                           <div className={paymentSelectedPanelClassName}>
-                            <Label className="cursor-default">Card details</Label>
-                            <div className={paymentElementWrapperClassName}>
-                              <CardElement options={{ hidePostalCode: true }} />
-                            </div>
-                            <p className={paymentHelperTextClassName}>Test mode: use 4242 4242 4242 4242.</p>
+                           <Label className="cursor-default">Card details</Label>
+                           <div className={paymentElementWrapperClassName}>
+                             <CardElement options={{ hidePostalCode: true }} />
+                           </div>
                           </div>
                         </Elements>
                       )}
@@ -1792,11 +1791,10 @@ const CheckoutPage = () => {
                           <Elements key={`woopayments-${toMinorAmount(total)}`} stripe={wooPaymentsStripePromise} options={wooPaymentsElementsOptions}>
                             <StripeElementsBridge onChange={handleWooPaymentsContextChange} />
                             <div className={paymentSelectedPanelClassName}>
-                              <Label className="cursor-default">Card details</Label>
-                              <div className={paymentElementWrapperClassName}>
-                                <PaymentElement />
-                              </div>
-                              <p className={paymentHelperTextClassName}>Test mode: use 4242 4242 4242 4242.</p>
+                             <Label className="cursor-default">Card details</Label>
+                             <div className={paymentElementWrapperClassName}>
+                               <PaymentElement />
+                             </div>
                             </div>
                           </Elements>
                         )}
