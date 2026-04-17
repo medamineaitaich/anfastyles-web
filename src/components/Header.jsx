@@ -83,7 +83,7 @@ const Header = ({ onCartClick }) => {
   return (
     <header className="sticky top-0 z-50 overflow-x-clip bg-background border-b border-border">
       <div className="bg-primary text-primary-foreground py-2 text-center text-sm font-medium">
-        Free shipping over $75
+        Free US shipping over $75
       </div>
       
       <div className="container-custom py-4">

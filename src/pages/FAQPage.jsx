@@ -23,11 +23,11 @@ const FAQPage = () => {
     },
     {
       question: 'Do you ship internationally?',
-      answer: 'Yes, we ship worldwide. Shipping costs and delivery times vary by location. Free shipping applies to US orders over $75 only.'
+      answer: 'Not yet. We currently ship within the United States only.'
     },
     {
       question: 'How long does shipping take?',
-      answer: 'Standard shipping takes 5-7 business days within the US. International orders typically arrive within 10-14 business days.'
+      answer: 'Standard shipping within the United States typically takes 3-7 business days after production.'
     },
     {
       question: 'What materials do you use?',

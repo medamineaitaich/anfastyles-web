@@ -133,7 +133,7 @@ const HomePage = () => {
   };
 
   const features = [
-    { icon: Truck, title: 'Free shipping', description: 'On orders over $75' },
+    { icon: Truck, title: 'Free shipping', description: 'US orders over $75' },
     { icon: Leaf, title: 'Eco-friendly', description: 'Sustainable materials' },
     { icon: Award, title: 'Premium quality', description: 'Handpicked designs' },
     { icon: Users, title: 'Community driven', description: 'Support local artists' }
@@ -154,7 +154,7 @@ const HomePage = () => {
     },
     {
       question: 'Do you ship internationally?',
-      answer: 'Yes, we ship worldwide. Shipping costs and delivery times vary by location. Free shipping applies to US orders over $75 only.'
+      answer: 'Not yet. We currently ship within the United States only.'
     }
   ];
 

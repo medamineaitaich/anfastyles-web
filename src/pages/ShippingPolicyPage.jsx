@@ -58,12 +58,9 @@ const ShippingPolicyPage = () => {
               <p className="mb-2 leading-relaxed text-muted-foreground">Estimated delivery times:</p>
               <ul className="mb-4 list-disc space-y-2 pl-6 text-muted-foreground">
                 <li>United States: 3 to 7 business days</li>
-                <li>Europe: 5 to 10 business days</li>
-                <li>International: 7 to 15 business days</li>
               </ul>
               <p className="mb-4 leading-relaxed text-muted-foreground">
-                These timeframes are estimates only and may vary depending on destination, carrier performance, customs
-                processing, and seasonal demand.
+                These timeframes are estimates only and may vary depending on destination, carrier performance, and seasonal demand.
               </p>
             </section>
 
@@ -85,7 +82,7 @@ const ShippingPolicyPage = () => {
             <section className="mb-8">
               <h2 className="mb-4 text-2xl font-bold">5. Delays</h2>
               <p className="mb-4 leading-relaxed text-muted-foreground">
-                We are not responsible for delays caused by shipping carriers, customs clearance, weather conditions,
+                We are not responsible for delays caused by shipping carriers, weather conditions,
                 incorrect or incomplete shipping information provided by the customer, or other circumstances beyond
                 our control.
               </p>
@@ -122,9 +119,7 @@ const ShippingPolicyPage = () => {
             <section className="mb-8">
               <h2 className="mb-4 text-2xl font-bold">8. Customs, Duties, and Taxes</h2>
               <p className="mb-4 leading-relaxed text-muted-foreground">
-                For international orders, customs fees, import duties, taxes, and other charges may apply depending on
-                your country. These charges are the responsibility of the customer and are not included in the product
-                or shipping price unless otherwise stated.
+                We currently ship within the United States only. Customs fees and import duties do not apply for US orders.
               </p>
             </section>
 
@@ -145,4 +140,3 @@ const ShippingPolicyPage = () => {
 };
 
 export default ShippingPolicyPage;
-

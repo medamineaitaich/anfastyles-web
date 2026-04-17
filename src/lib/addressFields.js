@@ -1,7 +1,5 @@
 export const countryOptions = [
   { value: 'US', label: 'United States' },
-  { value: 'CA', label: 'Canada' },
-  { value: 'UK', label: 'United Kingdom' },
 ];
 
 export const REGION_OPTIONS_BY_COUNTRY = {
