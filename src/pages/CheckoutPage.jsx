@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Truck, MapPin } from 'lucide-react';
@@ -447,6 +447,7 @@ const CheckoutPage = () => {
   const { cart, loading: cartLoading, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const checkoutRedirectingRef = useRef(false);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState(['stripe']);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
   const [paymentMethodsError, setPaymentMethodsError] = useState('');
@@ -496,7 +497,9 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (cartLoading) return;
     if (cart.items.length === 0) {
-      navigate('/cart');
+      if (!checkoutRedirectingRef.current) {
+        navigate('/cart');
+      }
     }
   }, [cart.items.length, cartLoading, navigate]);
 
@@ -1135,17 +1138,19 @@ const CheckoutPage = () => {
       };
 
       const completeSuccessfulCheckout = async (orderSummary) => {
+        checkoutRedirectingRef.current = true;
         syncCheckoutProfileState();
         storeOrderSummary(orderSummary);
+        navigate(`/order-confirmation?orderId=${orderSummary.orderId}&orderNumber=${orderSummary.orderNumber}`, {
+          state: { orderSummary },
+        });
+
+        // Clear the cart after navigation so the empty-cart guard doesn't win the redirect race.
         try {
           await clearCart();
         } catch (cartError) {
           console.error('Unable to clear cart after checkout:', cartError);
         }
-
-        navigate(`/order-confirmation?orderId=${orderSummary.orderId}&orderNumber=${orderSummary.orderNumber}`, {
-          state: { orderSummary },
-        });
       };
 
       await createCheckoutAccountIfNeeded();
