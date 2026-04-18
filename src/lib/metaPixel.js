@@ -51,8 +51,8 @@ export const initMetaPixel = () => {
   'https://connect.facebook.net/en_US/fbevents.js');
   /* eslint-enable */
 
-  window.fbq('set', 'autoConfig', 'false', pixelId);
-  window.fbq('init', pixelId);
+  // Explicitly disable automatic configuration (helps reduce noisy auto-logged events and avoids relying on Event Setup Tool rules).
+  window.fbq('init', pixelId, {}, { autoConfig: 'false' });
   return true;
 };
 
