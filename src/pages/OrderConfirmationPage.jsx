@@ -24,7 +24,7 @@ const OrderConfirmationPage = () => {
     : null;
 
   const [orderData, setOrderData] = useState(initialOrderSummary);
-  const { authenticated } = useAuth();
+  const { authenticated, user } = useAuth();
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -38,14 +38,23 @@ const OrderConfirmationPage = () => {
     if (!orderData) return;
     if (!Array.isArray(orderData.items) || orderData.items.length === 0) return;
 
-    trackTikTokPurchaseOnce({
+    void trackTikTokPurchaseOnce({
       orderId: orderData.orderId || orderId || null,
       orderNumber: orderData.orderNumber || orderNumber || null,
       items: orderData.items,
       value: orderData.total,
       currency: 'USD',
+      user: {
+        email: orderData?.billing?.email || '',
+        phone: orderData?.billing?.phone || '',
+        external_id: user?.userId || '',
+      },
+      page: {
+        url: window.location?.href,
+        referrer: document.referrer,
+      },
     });
-  }, [orderData, orderId, orderNumber]);
+  }, [orderData, orderId, orderNumber, user?.userId]);
 
   useEffect(() => {
     if (orderId && authenticated) {
