@@ -8,6 +8,7 @@ import apiServerClient from '@/lib/apiServerClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { generateInvoice } from '@/components/InvoiceGenerator.jsx';
 import { normalizeOrderSummary, readStoredOrderSummary, storeOrderSummary } from '@/lib/orderSummary.js';
+import { trackMetaPurchaseOnce } from '@/lib/metaPixel.js';
 import { trackTikTokPurchaseOnce } from '@/lib/tiktokPixel.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
@@ -37,6 +38,14 @@ const OrderConfirmationPage = () => {
   useEffect(() => {
     if (!orderData) return;
     if (!Array.isArray(orderData.items) || orderData.items.length === 0) return;
+
+    trackMetaPurchaseOnce({
+      orderId: orderData.orderId || orderId || null,
+      orderNumber: orderData.orderNumber || orderNumber || null,
+      items: orderData.items,
+      value: orderData.total,
+      currency: 'USD',
+    });
 
     void trackTikTokPurchaseOnce({
       orderId: orderData.orderId || orderId || null,

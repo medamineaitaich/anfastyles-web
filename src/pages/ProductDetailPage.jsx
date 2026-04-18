@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import apiServerClient from '@/lib/apiServerClient';
 import { getCartLineKey } from '@/lib/cart';
+import { getMetaContentId, trackMetaAddToCart, trackMetaViewContent } from '@/lib/metaPixel.js';
 import { getTikTokContentId, trackTikTokAddToCart, trackTikTokViewContent } from '@/lib/tiktokPixel.js';
 import { useCart } from '@/contexts/CartContext.jsx';
 import { notifyError, notifySuccess } from '@/lib/notifications.js';
@@ -482,6 +483,13 @@ const ProductDetailPage = () => {
       value: Number.parseFloat(product?.price) || 0,
       currency: 'USD',
     });
+
+    trackMetaViewContent({
+      contentId: getMetaContentId({ productId }),
+      contentName: product?.name || '',
+      value: Number.parseFloat(product?.price) || undefined,
+      currency: 'USD',
+    });
   }, [product?.id]);
 
   const fetchProduct = async () => {
@@ -771,6 +779,14 @@ const ProductDetailPage = () => {
       });
       trackTikTokAddToCart({
         contentId: getTikTokContentId({ productId: product.id, variationId: selectedVariation?.id || null }),
+        contentName: product?.name || '',
+        quantity: quantityToAdd,
+        unitPrice: itemPrice,
+        value: itemPrice * quantityToAdd,
+        currency: 'USD',
+      });
+      trackMetaAddToCart({
+        contentId: getMetaContentId({ productId: product.id, variationId: selectedVariation?.id || null, sku: selectedVariation?.sku || product?.sku || '' }),
         contentName: product?.name || '',
         quantity: quantityToAdd,
         unitPrice: itemPrice,
