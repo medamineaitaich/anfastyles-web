@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, Link } from 'react-router-dom';
 import { Minus, Plus, ShoppingCart, ChevronLeft } from 'lucide-react';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import apiServerClient from '@/lib/apiServerClient';
 import { getCartLineKey } from '@/lib/cart';
+import { getTikTokContentId, trackTikTokAddToCart, trackTikTokViewContent } from '@/lib/tiktokPixel.js';
 import { useCart } from '@/contexts/CartContext.jsx';
 import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import Header from '@/components/Header.jsx';
@@ -452,6 +453,7 @@ const ProductDetailPage = () => {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [selectionErrorVisible, setSelectionErrorVisible] = useState(false);
   const { cart, addItem } = useCart();
+  const tiktokViewContentTrackedRef = useRef('');
 
   const formatPrice = (value) => {
     const n = Number(value);
@@ -464,6 +466,22 @@ const ProductDetailPage = () => {
 
   useEffect(() => {
     setDescriptionExpanded(false);
+  }, [product?.id]);
+
+  useEffect(() => {
+    const productId = product?.id;
+    if (!productId) return;
+
+    const contentId = getTikTokContentId({ productId });
+    if (!contentId || tiktokViewContentTrackedRef.current === contentId) return;
+
+    tiktokViewContentTrackedRef.current = contentId;
+    trackTikTokViewContent({
+      contentId,
+      contentName: product?.name || '',
+      value: Number.parseFloat(product?.price) || 0,
+      currency: 'USD',
+    });
   }, [product?.id]);
 
   const fetchProduct = async () => {
@@ -750,6 +768,14 @@ const ProductDetailPage = () => {
         description: `${product.name} is ready in your cart.`,
         id: ADD_TO_CART_TOAST_ID,
         duration: 2200,
+      });
+      trackTikTokAddToCart({
+        contentId: getTikTokContentId({ productId: product.id, variationId: selectedVariation?.id || null }),
+        contentName: product?.name || '',
+        quantity: quantityToAdd,
+        unitPrice: itemPrice,
+        value: itemPrice * quantityToAdd,
+        currency: 'USD',
       });
       setCartDrawerOpen(true);
     } catch (error) {

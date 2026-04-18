@@ -19,6 +19,7 @@ import { countryOptions, getRegionFieldLabel, getRegionOptions, getRegionPlaceho
 import { readCheckoutProfile, saveCheckoutProfile } from '@/lib/checkoutProfile.js';
 import { notifyError, notifySuccess } from '@/lib/notifications.js';
 import { normalizeOrderSummary, storeOrderSummary } from '@/lib/orderSummary.js';
+import { trackTikTokInitiateCheckout } from '@/lib/tiktokPixel.js';
 import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
@@ -448,6 +449,7 @@ const CheckoutPage = () => {
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const checkoutRedirectingRef = useRef(false);
+  const tiktokInitiateCheckoutTrackedRef = useRef(false);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState(['stripe']);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
   const [paymentMethodsError, setPaymentMethodsError] = useState('');
@@ -502,6 +504,19 @@ const CheckoutPage = () => {
       }
     }
   }, [cart.items.length, cartLoading, navigate]);
+
+  useEffect(() => {
+    if (tiktokInitiateCheckoutTrackedRef.current) return;
+    if (cartLoading) return;
+    if (cart.items.length === 0) return;
+
+    tiktokInitiateCheckoutTrackedRef.current = true;
+    trackTikTokInitiateCheckout({
+      items: cart.items,
+      value: Number(cart?.subtotal) || 0,
+      currency: 'USD',
+    });
+  }, [cart.items.length, cartLoading]);
 
   useEffect(() => {
     if (!authenticated || !user) return;
