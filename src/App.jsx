@@ -11,6 +11,7 @@ import ProductDetailPage from './pages/ProductDetailPage.jsx';
 import CartPage from './pages/CartPage.jsx';
 import CheckoutPage from './pages/CheckoutPage.jsx';
 import OrderConfirmationPage from './pages/OrderConfirmationPage.jsx';
+import MetaPixelTracker from './components/MetaPixelTracker.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import SignupPage from './pages/SignupPage.jsx';
 import AccountDashboard from './pages/AccountDashboard.jsx';
@@ -35,6 +36,7 @@ function App() {
       <CartProvider>
         <Router>
           <ScrollToTop />
+          <MetaPixelTracker />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/shop" element={<ShopPage />} />
