@@ -5,6 +5,8 @@ import Header from '@/components/Header.jsx';
 import Footer from '@/components/Footer.jsx';
 import CartDrawer from '@/components/CartDrawer.jsx';
 
+const ABOUT_STORY_IMAGE = '/about-story.webp';
+
 const AboutPage = () => {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
@@ -67,8 +69,8 @@ const AboutPage = () => {
               </div>
               <div className="relative">
                 <img
-                  src="https://images.unsplash.com/photo-1618815909724-861120595390"
-                  alt="Sustainable fashion production"
+                  src={ABOUT_STORY_IMAGE}
+                  alt="AnfaStyles studio story scene"
                   className="rounded-2xl shadow-lg w-full"
                 />
               </div>

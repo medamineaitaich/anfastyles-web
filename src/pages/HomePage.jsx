@@ -16,6 +16,7 @@ import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 const HOMEPAGE_TOP_IMAGE = '/homepage-top.webp';
+const HOMEPAGE_STORY_IMAGE = '/about-story.webp';
 
 const HomePage = () => {
   const [homeProducts, setHomeProducts] = useState([]);
@@ -335,8 +336,8 @@ const HomePage = () => {
                 className="relative"
               >
                 <img
-                  src={HOMEPAGE_TOP_IMAGE}
-                  alt="AnfaStyles eco apparel showcase"
+                  src={HOMEPAGE_STORY_IMAGE}
+                  alt="AnfaStyles conscious creation studio"
                   className="rounded-2xl shadow-lg w-full"
                 />
               </motion.div>
