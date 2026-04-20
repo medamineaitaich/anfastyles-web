@@ -15,6 +15,7 @@ import CartDrawer from '@/components/CartDrawer.jsx';
 import ProductRatingStars from '@/components/ProductRatingStars.jsx';
 
 const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+const HOMEPAGE_TOP_IMAGE = '/homepage-top.webp';
 
 const HomePage = () => {
   const [homeProducts, setHomeProducts] = useState([]);
@@ -172,8 +173,8 @@ const HomePage = () => {
         <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0">
             <img
-              src="https://images.unsplash.com/photo-1698181090645-020da72cbeca"
-              alt="Sustainable fashion background"
+              src={HOMEPAGE_TOP_IMAGE}
+              alt="AnfaStyles sustainable apparel collection"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/40" />
@@ -334,8 +335,8 @@ const HomePage = () => {
                 className="relative"
               >
                 <img
-                  src="https://images.unsplash.com/photo-1618815909724-861120595390"
-                  alt="Sustainable production process"
+                  src={HOMEPAGE_TOP_IMAGE}
+                  alt="AnfaStyles eco apparel showcase"
                   className="rounded-2xl shadow-lg w-full"
                 />
               </motion.div>
