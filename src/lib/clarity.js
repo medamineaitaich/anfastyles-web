@@ -1,5 +1,6 @@
 const CLARITY_PROJECT_ID = String(import.meta.env.VITE_CLARITY_PROJECT_ID || '').trim();
 const CLARITY_SCRIPT_ID = 'microsoft-clarity-script';
+const ALLOWED_HOSTS = ['anfastyles.shop', 'www.anfastyles.shop'];
 
 let clarityBootstrapped = false;
 
@@ -19,6 +20,7 @@ const ensureQueue = () => {
 export const initClarity = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return false;
   if (!CLARITY_PROJECT_ID) return false;
+  if (!ALLOWED_HOSTS.includes(window.location.hostname)) return false;
 
   ensureQueue();
 
@@ -55,4 +57,3 @@ export const trackClarityRoute = (pathname) => {
   clarity('set', 'route', safePath);
   return true;
 };
-
