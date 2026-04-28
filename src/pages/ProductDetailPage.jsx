@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, Link } from 'react-router-dom';
-import { Minus, Plus, ShoppingCart, ChevronLeft, RefreshCcw, ShieldCheck, Truck, PackageCheck } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import apiServerClient from '@/lib/apiServerClient';
@@ -20,10 +20,10 @@ const FALLBACK_DESCRIPTION = 'Sustainably crafted with eco-friendly materials. M
 const DESCRIPTION_PREVIEW_LENGTH = 220;
 const ADD_TO_CART_TOAST_ID = 'add-to-cart-success';
 const TRUST_BADGES = [
-  { icon: RefreshCcw, text: '30-Day Refund Policy' },
-  { icon: ShieldCheck, text: 'Secure Checkout' },
-  { icon: Truck, text: 'Tracked Shipping' },
-  { icon: PackageCheck, text: 'Made to Order' },
+  '30-Day Refund',
+  'Secure Checkout',
+  'Tracked Shipping',
+  'Made to Order',
 ];
 const COLOR_SWATCH_MAP = {
   black: '#111827',
@@ -1066,11 +1066,17 @@ const ProductDetailPage = () => {
                   {addToCartLabel}
                 </Button>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4 md:grid-cols-2">
-                  {TRUST_BADGES.map(({ icon: Icon, text }) => (
-                    <div key={text} className="flex items-center gap-2 rounded-lg border border-border/70 bg-background px-3 py-2">
-                      <Icon className="h-4 w-4 shrink-0 text-primary" />
-                      <span className="font-medium text-foreground">{text}</span>
+                <div className="mt-5 grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-4 md:grid-cols-2">
+                  {TRUST_BADGES.map((text) => (
+                    <div
+                      key={text}
+                      className="grid aspect-square w-full max-w-[6.75rem] place-items-center rounded-full bg-primary/15 p-1 [clip-path:polygon(50%_0%,56%_7%,63%_2%,68%_10%,76%_6%,80%_15%,89%_14%,91%_24%,98%_31%,93%_39%,100%_50%,93%_61%,98%_69%,91%_76%,89%_86%,80%_85%,76%_94%,68%_90%,63%_98%,56%_93%,50%_100%,44%_93%,37%_98%,32%_90%,24%_94%,20%_85%,11%_86%,9%_76%,2%_69%,7%_61%,0%_50%,7%_39%,2%_31%,9%_24%,11%_14%,20%_15%,24%_6%,32%_10%,37%_2%,44%_7%)]"
+                    >
+                      <div className="grid h-full w-full place-items-center rounded-full border border-primary/25 bg-background px-2 text-center shadow-sm">
+                        <span className="text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.12em] text-foreground">
+                          {text}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
