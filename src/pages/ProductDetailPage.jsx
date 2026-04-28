@@ -1066,14 +1066,14 @@ const ProductDetailPage = () => {
                   {addToCartLabel}
                 </Button>
 
-                <div className="mt-5 grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-4 md:grid-cols-2">
+                <div className="mt-5 grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-4 md:grid-cols-4">
                   {TRUST_BADGES.map((text) => (
                     <div
                       key={text}
-                      className="grid aspect-square w-full max-w-[6.75rem] place-items-center rounded-full bg-primary/15 p-1 [clip-path:polygon(50%_0%,56%_7%,63%_2%,68%_10%,76%_6%,80%_15%,89%_14%,91%_24%,98%_31%,93%_39%,100%_50%,93%_61%,98%_69%,91%_76%,89%_86%,80%_85%,76%_94%,68%_90%,63%_98%,56%_93%,50%_100%,44%_93%,37%_98%,32%_90%,24%_94%,20%_85%,11%_86%,9%_76%,2%_69%,7%_61%,0%_50%,7%_39%,2%_31%,9%_24%,11%_14%,20%_15%,24%_6%,32%_10%,37%_2%,44%_7%)]"
+                      className="grid aspect-square w-full max-w-[5.9rem] place-items-center rounded-full bg-primary p-1 [clip-path:polygon(50%_0%,56%_7%,63%_2%,68%_10%,76%_6%,80%_15%,89%_14%,91%_24%,98%_31%,93%_39%,100%_50%,93%_61%,98%_69%,91%_76%,89%_86%,80%_85%,76%_94%,68%_90%,63%_98%,56%_93%,50%_100%,44%_93%,37%_98%,32%_90%,24%_94%,20%_85%,11%_86%,9%_76%,2%_69%,7%_61%,0%_50%,7%_39%,2%_31%,9%_24%,11%_14%,20%_15%,24%_6%,32%_10%,37%_2%,44%_7%)]"
                     >
-                      <div className="grid h-full w-full place-items-center rounded-full border border-primary/25 bg-background px-2 text-center shadow-sm">
-                        <span className="text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.12em] text-foreground">
+                      <div className="grid h-full w-full place-items-center rounded-full border border-primary/30 bg-background px-1.5 text-center shadow-sm">
+                        <span className="text-[0.62rem] font-semibold uppercase leading-tight tracking-[0.1em] text-foreground">
                           {text}
                         </span>
                       </div>
