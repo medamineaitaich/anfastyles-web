@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useParams, Link } from 'react-router-dom';
-import { Minus, Plus, ShoppingCart, ChevronLeft } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, ChevronLeft, RefreshCcw, ShieldCheck, Truck, PackageCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import apiServerClient from '@/lib/apiServerClient';
@@ -19,6 +19,12 @@ import SizeGuideDialog from '@/components/SizeGuideDialog.jsx';
 const FALLBACK_DESCRIPTION = 'Sustainably crafted with eco-friendly materials. Made-to-order to reduce waste and support conscious creation.';
 const DESCRIPTION_PREVIEW_LENGTH = 220;
 const ADD_TO_CART_TOAST_ID = 'add-to-cart-success';
+const TRUST_BADGES = [
+  { icon: RefreshCcw, text: '30-Day Refund Policy' },
+  { icon: ShieldCheck, text: 'Secure Checkout' },
+  { icon: Truck, text: 'Tracked Shipping' },
+  { icon: PackageCheck, text: 'Made to Order' },
+];
 const COLOR_SWATCH_MAP = {
   black: '#111827',
   white: '#f8fafc',
@@ -1059,6 +1065,15 @@ const ProductDetailPage = () => {
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   {addToCartLabel}
                 </Button>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4 md:grid-cols-2">
+                  {TRUST_BADGES.map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-center gap-2 rounded-lg border border-border/70 bg-background px-3 py-2">
+                      <Icon className="h-4 w-4 shrink-0 text-primary" />
+                      <span className="font-medium text-foreground">{text}</span>
+                    </div>
+                  ))}
+                </div>
 
                 <div className="mt-5 rounded-lg bg-muted p-4">
                   <ul className="space-y-2 text-sm text-muted-foreground">
