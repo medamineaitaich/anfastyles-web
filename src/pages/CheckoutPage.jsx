@@ -27,12 +27,12 @@ import CartDrawer from '@/components/CartDrawer.jsx';
 
 const PAYMENT_METHOD_META = {
   stripe: {
-    label: 'Credit card',
+    label: 'Credit or debit card',
     description: 'Visa, Mastercard, Amex',
   },
   woocommerce_payments: {
-    label: 'WooPayments',
-    description: 'Available from WooCommerce',
+    label: 'Credit or debit card',
+    description: 'Processed securely by WooPayments, in partnership with Stripe.',
   },
   cod: {
     label: 'Cash on delivery',
@@ -1782,8 +1782,8 @@ const CheckoutPage = ({
                       <CreditCard className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Payment</h2>
-                      <p className="text-sm text-muted-foreground">Choose a payment method and enter the required details.</p>
+                      <h2 className="text-xl font-bold">Pay with credit or debit card</h2>
+                      <p className="text-sm text-muted-foreground">Processed securely by WooPayments, in partnership with Stripe.</p>
                     </div>
                   </div>
 
