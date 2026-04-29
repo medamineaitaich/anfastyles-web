@@ -270,7 +270,7 @@ const ProductOptionsPanel = ({
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/80">Order your tee</p>
         <h3 className="mt-2 text-2xl font-bold">Choose your color, size, and quantity</h3>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          This section is connected to the live WooCommerce product, so the available options and price stay real.
+          Pick your favorite color, find your size, and make it yours.
         </p>
       </div>
       <div className="rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-sm">
@@ -372,7 +372,7 @@ const ProductOptionsPanel = ({
         </div>
 
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Quantity, size, color, and variation pricing come from the live product data before the order is placed.
+          Select the combination that feels right for you, then finish your order below.
         </p>
       </div>
     </div>
@@ -578,7 +578,7 @@ const CompostOfferPage = () => {
 
               <div className="flex flex-wrap items-end gap-5">
                 <div className="rounded-3xl border border-border/60 bg-card px-5 py-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/75">Live WooCommerce price</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/75">Offer price</p>
                   <p className="mt-2 text-4xl font-bold text-foreground">
                     {loading ? <span className="text-2xl">Loading...</span> : `$${formatPrice(displayPrice)}`}
                   </p>
@@ -631,7 +631,7 @@ const CompostOfferPage = () => {
               <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">Choose the look that fits your garden mood</h2>
             </div>
             <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-              These visuals are curated for this landing page. Your actual purchase still uses the real WooCommerce color variations below.
+              Explore the colors and choose the one that feels most like you.
             </p>
           </div>
 
@@ -744,7 +744,7 @@ const CompostOfferPage = () => {
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Order section</p>
             <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">Choose your variation and complete checkout here</h2>
             <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-              The product options below come from the live WooCommerce product. The checkout form underneath uses the same payment, order, and success flow as the main store.
+              Choose your color, size, and quantity, then complete your order below.
             </p>
           </div>
 
