@@ -443,10 +443,20 @@ const normalizePaymentMethods = (methods) => {
   return ordered.filter((method) => SUPPORTED_PAYMENT_METHODS.includes(method));
 };
 
-const CheckoutPage = () => {
+const CheckoutPage = ({
+  embedded = false,
+  cartOverride = null,
+  cartLoadingOverride = null,
+  clearCartOverride = null,
+} = {}) => {
   const navigate = useNavigate();
   const { user, authenticated, verifySession } = useAuth();
   const { cart, loading: cartLoading, clearCart } = useCart();
+  const checkoutCart = cartOverride || cart;
+  const checkoutItems = Array.isArray(checkoutCart?.items) ? checkoutCart.items : [];
+  const checkoutSubtotal = Number(checkoutCart?.subtotal) || 0;
+  const checkoutCartLoading = typeof cartLoadingOverride === 'boolean' ? cartLoadingOverride : cartLoading;
+  const clearCheckoutCart = clearCartOverride || clearCart;
   const [loading, setLoading] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const checkoutRedirectingRef = useRef(false);
@@ -499,39 +509,39 @@ const CheckoutPage = () => {
   }, []);
 
   useEffect(() => {
-    if (cartLoading) return;
-    if (cart.items.length === 0) {
+    if (embedded || checkoutCartLoading) return;
+    if (checkoutItems.length === 0) {
       if (!checkoutRedirectingRef.current) {
         navigate('/cart');
       }
     }
-  }, [cart.items.length, cartLoading, navigate]);
+  }, [checkoutCartLoading, checkoutItems.length, embedded, navigate]);
 
   useEffect(() => {
     if (tiktokInitiateCheckoutTrackedRef.current) return;
-    if (cartLoading) return;
-    if (cart.items.length === 0) return;
+    if (checkoutCartLoading) return;
+    if (checkoutItems.length === 0) return;
 
     tiktokInitiateCheckoutTrackedRef.current = true;
     trackTikTokInitiateCheckout({
-      items: cart.items,
-      value: Number(cart?.subtotal) || 0,
+      items: checkoutItems,
+      value: checkoutSubtotal || 0,
       currency: 'USD',
     });
-  }, [cart.items.length, cartLoading]);
+  }, [checkoutCartLoading, checkoutItems, checkoutSubtotal]);
 
   useEffect(() => {
     if (metaInitiateCheckoutTrackedRef.current) return;
-    if (cartLoading) return;
-    if (cart.items.length === 0) return;
+    if (checkoutCartLoading) return;
+    if (checkoutItems.length === 0) return;
 
     metaInitiateCheckoutTrackedRef.current = true;
     trackMetaInitiateCheckout({
-      items: cart.items,
-      value: Number(cart?.subtotal) || undefined,
+      items: checkoutItems,
+      value: checkoutSubtotal || undefined,
       currency: 'USD',
     });
-  }, [cart.items.length, cartLoading]);
+  }, [checkoutCartLoading, checkoutItems, checkoutSubtotal]);
 
   useEffect(() => {
     if (!authenticated || !user) return;
@@ -1177,7 +1187,7 @@ const CheckoutPage = () => {
 
         // Clear the cart after navigation so the empty-cart guard doesn't win the redirect race.
         try {
-          await clearCart();
+          await clearCheckoutCart();
         } catch (cartError) {
           console.error('Unable to clear cart after checkout:', cartError);
         }
@@ -1188,7 +1198,7 @@ const CheckoutPage = () => {
       const buildStoreCheckoutSession = async () => {
         let storeSession = (await storeFetch('/cart'))?.store;
 
-        for (const cartItem of cart.items) {
+        for (const cartItem of checkoutItems) {
           const variationId = await resolveVariationId(cartItem);
           const added = await storeFetch('/cart/add-item', {
             method: 'POST',
@@ -1319,7 +1329,7 @@ const CheckoutPage = () => {
           ], needsShipping),
         });
         await finalizeStoreCheckout(checkoutRes, {
-          items: cart.items,
+          items: checkoutItems,
           billing: billing_address,
           shipping: needsShipping ? shipping_address : billing_address,
           subtotal,
@@ -1342,7 +1352,7 @@ const CheckoutPage = () => {
         });
 
         await finalizeStoreCheckout(checkoutRes, {
-          items: cart.items,
+          items: checkoutItems,
           billing: billing_address,
           shipping: needsShipping ? shipping_address : billing_address,
           subtotal,
@@ -1408,7 +1418,7 @@ const CheckoutPage = () => {
         });
 
         await finalizeStoreCheckout(checkoutRes, {
-          items: cart.items,
+          items: checkoutItems,
           billing: billing_address,
           shipping: needsShipping ? shipping_address : billing_address,
           subtotal,
@@ -1421,7 +1431,7 @@ const CheckoutPage = () => {
       }
 
       const orderData = {
-        cartItems: cart.items.map(item => ({
+        cartItems: checkoutItems.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
           price: parseFloat(item.price)
@@ -1462,7 +1472,7 @@ const CheckoutPage = () => {
 
       const data = await response.json();
       const orderSummary = normalizeOrderSummary(data, {
-        items: cart.items,
+        items: checkoutItems,
         billing: billing_address,
         shipping: shipping_address,
         subtotal,
@@ -1481,7 +1491,7 @@ const CheckoutPage = () => {
     }
   };
 
-  const subtotal = Number(cart?.subtotal) || 0;
+  const subtotal = checkoutSubtotal;
   const shippingCost = useMemo(() => getShippingFallbackCost(formData.shippingMethod, subtotal), [formData.shippingMethod, subtotal]);
   const tax = 0;
   const total = subtotal + shippingCost;
@@ -1507,9 +1517,9 @@ const CheckoutPage = () => {
     || (formData.paymentMethod === 'woocommerce_payments' && wooPaymentsConfigError ? (wooPaymentsConfigError || 'WooPayments is unavailable.') : '');
 
   const placeOrderDisabled = loading
-    || cartLoading
+    || checkoutCartLoading
     || paymentMethodsLoading
-    || cart.items.length === 0
+    || checkoutItems.length === 0
     || !formData.paymentMethod
     || !!paymentUnavailableMessage
     || (formData.paymentMethod === 'stripe' && (!stripePublishableKey || !currentPaymentContext?.stripe || !currentPaymentContext?.elements))
@@ -1532,24 +1542,20 @@ const CheckoutPage = () => {
     elements: currentPaymentContext?.elements || undefined,
   });
 
-  return (
-    <>
-      <Helmet>
-        <title>Checkout - AnfaStyles</title>
-        <meta name="description" content="Complete your order" />
-      </Helmet>
-
-      <Header onCartClick={() => setCartDrawerOpen(true)} />
-      <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
-
-      <main className="py-8 pb-28 overflow-x-hidden md:py-12 md:pb-12 lg:overflow-visible">
+  const CheckoutWrapper = embedded ? 'div' : 'main';
+  const checkoutContent = (
+    <CheckoutWrapper className={`${embedded ? 'py-0' : 'py-8 pb-28 md:py-12 md:pb-12'} overflow-x-hidden lg:overflow-visible`}>
         <div className="container-custom max-w-5xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3 text-balance" style={{ letterSpacing: '-0.02em' }}>
-            Checkout
-          </h1>
-          <p className="mb-8 max-w-2xl text-sm text-muted-foreground md:text-base">
-            Complete your details, choose a delivery option, and finish payment in one place.
-          </p>
+          {!embedded && (
+            <>
+              <h1 className="text-4xl md:text-5xl font-bold mb-3 text-balance" style={{ letterSpacing: '-0.02em' }}>
+                Checkout
+              </h1>
+              <p className="mb-8 max-w-2xl text-sm text-muted-foreground md:text-base">
+                Complete your details, choose a delivery option, and finish payment in one place.
+              </p>
+            </>
+          )}
 
           <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_320px] md:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="min-w-0 space-y-6">
@@ -1846,9 +1852,9 @@ const CheckoutPage = () => {
               <div className={stickySummaryCardClassName}>
                 <h2 className="text-xl font-bold mb-4">Order summary</h2>
 
-                {cart.items.length > 0 && (
+                {checkoutItems.length > 0 && (
                   <div className="space-y-4 mb-6">
-                    {cart.items.map((item) => {
+                    {checkoutItems.map((item) => {
                       const unitPrice = parseFloat(item.price) || 0;
                       const lineTotal = unitPrice * item.quantity;
 
@@ -1895,7 +1901,7 @@ const CheckoutPage = () => {
                     onClick={handleCheckoutSubmit}
                     disabled={placeOrderDisabled}
                     size="lg"
-                    className="hidden w-full md:inline-flex"
+                    className={embedded ? 'w-full' : 'hidden w-full md:inline-flex'}
                   >
                     {placeOrderButtonLabel}
                   </Button>
@@ -1909,24 +1915,41 @@ const CheckoutPage = () => {
           </div>
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 overflow-x-clip border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur md:hidden">
-          <div className="mx-auto flex min-w-0 max-w-5xl items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
-              <p className="text-lg font-bold font-variant-tabular">${total.toFixed(2)}</p>
+        {!embedded && (
+          <div className="fixed inset-x-0 bottom-0 z-40 overflow-x-clip border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+            <div className="mx-auto flex min-w-0 max-w-5xl items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
+                <p className="text-lg font-bold font-variant-tabular">${total.toFixed(2)}</p>
+              </div>
+              <Button
+                onClick={handleCheckoutSubmit}
+                disabled={placeOrderDisabled}
+                size="lg"
+                className="min-w-0 flex-1 whitespace-normal px-4 text-center leading-tight sm:min-w-[170px] sm:flex-none sm:whitespace-nowrap"
+              >
+                {placeOrderButtonLabel}
+              </Button>
             </div>
-            <Button
-              onClick={handleCheckoutSubmit}
-              disabled={placeOrderDisabled}
-              size="lg"
-              className="min-w-0 flex-1 whitespace-normal px-4 text-center leading-tight sm:min-w-[170px] sm:flex-none sm:whitespace-nowrap"
-            >
-              {placeOrderButtonLabel}
-            </Button>
           </div>
-        </div>
-      </main>
+        )}
+      </CheckoutWrapper>
+  );
 
+  if (embedded) {
+    return checkoutContent;
+  }
+
+  return (
+    <>
+      <Helmet>
+        <title>Checkout - AnfaStyles</title>
+        <meta name="description" content="Complete your order" />
+      </Helmet>
+
+      <Header onCartClick={() => setCartDrawerOpen(true)} />
+      <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
+      {checkoutContent}
       <Footer />
     </>
   );
