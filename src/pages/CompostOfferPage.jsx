@@ -126,6 +126,8 @@ const ATTRIBUTE_KIND_ALIASES = {
   size: new Set(['size', 'sizes', 'pa-size', 'pa_size']),
   color: new Set(['color', 'colors', 'colour', 'colours', 'pa-color', 'pa-colour', 'pa_color', 'pa_colour']),
 };
+const OFFER_CHECKOUT_ROOT_ID = 'compost-offer-checkout';
+const OFFER_PLACE_ORDER_BUTTON_ID = 'compost-offer-place-order';
 
 const normalizeOptionValue = (value) => String(value || '')
   .trim()
@@ -263,6 +265,8 @@ const ProductOptionsPanel = ({
   onColorChange,
   onSizeChange,
   onQuantityChange,
+  colorSectionRef,
+  sizeSectionRef,
 }) => (
   <div className="rounded-[2rem] border border-border/70 bg-card p-5 shadow-sm sm:p-6 lg:p-7">
     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -281,7 +285,7 @@ const ProductOptionsPanel = ({
 
     <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px]">
       <div className="space-y-8">
-        <div>
+        <div ref={colorSectionRef}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <label className="text-sm font-semibold">Color</label>
             <p className="text-sm text-muted-foreground">{selectedColor || 'Select a color'}</p>
@@ -320,7 +324,7 @@ const ProductOptionsPanel = ({
           </div>
         </div>
 
-        <div>
+        <div ref={sizeSectionRef}>
           <div className="mb-3 flex items-center justify-between gap-3">
             <label className="text-sm font-semibold">Size</label>
             <SizeGuideDialog />
@@ -386,7 +390,14 @@ const CompostOfferPage = () => {
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const [checkoutStatus, setCheckoutStatus] = useState({
+    requiredFieldsComplete: false,
+    canPlaceOrder: false,
+  });
   const orderSectionRef = useRef(null);
+  const colorSectionRef = useRef(null);
+  const sizeSectionRef = useRef(null);
+  const checkoutSectionRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -463,17 +474,6 @@ const CompostOfferPage = () => {
   })), [allSizes, selectedValues.color, variationEntries]);
 
   useEffect(() => {
-    if (variationEntries.length === 0) return;
-    if (selectedColor && selectedSize) return;
-
-    const defaultVariation = variationEntries.find((variation) => variation.inStock) || variationEntries[0];
-    if (!defaultVariation) return;
-
-    setSelectedColor(defaultVariation.attributesByKind.color?.label || '');
-    setSelectedSize(defaultVariation.attributesByKind.size?.label || '');
-  }, [selectedColor, selectedSize, variationEntries]);
-
-  useEffect(() => {
     if (!selectedColor) return;
     const current = colorOptions.find((option) => option.label === selectedColor);
     if (current && !current.disabled) return;
@@ -545,6 +545,53 @@ const CompostOfferPage = () => {
     orderSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const scrollToRef = (ref) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const stickyCtaState = useMemo(() => {
+    if (loading) {
+      return {
+        label: 'Loading offer',
+        action: () => {},
+        disabled: true,
+      };
+    }
+
+    if (!selectedSize) {
+      return {
+        label: 'Select Size',
+        action: () => scrollToRef(sizeSectionRef),
+        disabled: false,
+      };
+    }
+
+    if (!selectedColor) {
+      return {
+        label: 'Select Color',
+        action: () => scrollToRef(colorSectionRef),
+        disabled: false,
+      };
+    }
+
+    if (!checkoutStatus.requiredFieldsComplete) {
+      return {
+        label: 'Complete Checkout',
+        action: () => scrollToRef(checkoutSectionRef),
+        disabled: false,
+      };
+    }
+
+    return {
+      label: 'Place Order',
+      action: () => {
+        const submitButton = document.getElementById(OFFER_PLACE_ORDER_BUTTON_ID);
+        submitButton?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      },
+      disabled: false,
+    };
+  }, [checkoutStatus.requiredFieldsComplete, loading, selectedColor, selectedSize]);
+
   return (
     <>
       <Helmet>
@@ -558,7 +605,7 @@ const CompostOfferPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(160,198,150,0.18),_transparent_40%),linear-gradient(180deg,_rgba(250,247,240,0.98)_0%,_rgba(247,243,233,0.92)_48%,_rgba(255,255,255,1)_100%)] pb-16">
+      <main className="overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(160,198,150,0.18),_transparent_40%),linear-gradient(180deg,_rgba(250,247,240,0.98)_0%,_rgba(247,243,233,0.92)_48%,_rgba(255,255,255,1)_100%)] pb-28 md:pb-16">
         <section className="border-b border-border/50">
           <div className="container-custom grid gap-10 py-10 md:py-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-14">
             <div className="order-2 space-y-6 lg:order-1">
@@ -635,7 +682,7 @@ const CompostOfferPage = () => {
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-3">
             {SHOWCASE_IMAGES.map((image) => {
               const isActive = selectedColorKey === image.key || (image.key === 'light-pink' && selectedColorKey === 'azalea');
 
@@ -651,13 +698,13 @@ const CompostOfferPage = () => {
                     isActive ? 'border-primary/60 ring-2 ring-primary/20' : 'border-border/60'
                   }`}
                 >
-                  <img src={image.src} alt={`${image.label} Compost T-Shirt`} className="aspect-[4/4.6] w-full object-cover" />
-                  <div className="space-y-2 px-5 py-4">
+                  <img src={image.src} alt={`${image.label} Compost T-Shirt`} className="aspect-[4/4.9] w-full object-cover md:aspect-[4/4.6]" />
+                  <div className="space-y-2 px-3.5 py-3.5 md:px-5 md:py-4">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold">{image.label}</p>
-                      <span className="text-xs uppercase tracking-[0.16em] text-primary/80">{isActive ? 'Selected' : 'Preview'}</span>
+                      <p className="text-sm font-semibold md:text-base">{image.label}</p>
+                      <span className="text-[0.65rem] uppercase tracking-[0.16em] text-primary/80 md:text-xs">{isActive ? 'Selected' : 'Preview'}</span>
                     </div>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{image.description}</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">{image.description}</p>
                   </div>
                 </button>
               );
@@ -765,20 +812,38 @@ const CompostOfferPage = () => {
                 onColorChange={setSelectedColor}
                 onSizeChange={setSelectedSize}
                 onQuantityChange={setQuantity}
+                colorSectionRef={colorSectionRef}
+                sizeSectionRef={sizeSectionRef}
               />
 
-              <div className="rounded-[2rem] border border-border/60 bg-card/80 p-1 shadow-sm">
+              <div ref={checkoutSectionRef} className="rounded-[2rem] border border-border/60 bg-card/80 p-1 shadow-sm">
                 <CheckoutPage
                   embedded
                   cartOverride={offerCart}
                   cartLoadingOverride={loading}
                   clearCartOverride={async () => ({ items: [], subtotal: 0 })}
+                  embeddedRootId={OFFER_CHECKOUT_ROOT_ID}
+                  embeddedSubmitButtonId={OFFER_PLACE_ORDER_BUTTON_ID}
+                  onEmbeddedStateChange={setCheckoutStatus}
                 />
               </div>
             </div>
           )}
         </section>
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
+        <div className="mx-auto max-w-5xl">
+          <Button
+            size="lg"
+            className="w-full rounded-full"
+            onClick={stickyCtaState.action}
+            disabled={stickyCtaState.disabled}
+          >
+            {stickyCtaState.label}
+          </Button>
+        </div>
+      </div>
 
       <Footer />
     </>

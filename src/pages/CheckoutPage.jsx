@@ -448,6 +448,9 @@ const CheckoutPage = ({
   cartOverride = null,
   cartLoadingOverride = null,
   clearCartOverride = null,
+  onEmbeddedStateChange = null,
+  embeddedRootId = '',
+  embeddedSubmitButtonId = '',
 } = {}) => {
   const navigate = useNavigate();
   const { user, authenticated, verifySession } = useAuth();
@@ -978,7 +981,7 @@ const CheckoutPage = ({
     };
   };
 
-  const validateCheckoutForm = () => {
+  const getCheckoutValidationErrors = () => {
     const newErrors = {
       ...getAddressValidationErrors('billing', billingData, ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zip']),
       ...(shippingSameAsBilling ? {} : getAddressValidationErrors('shipping', shippingData, ['firstName', 'lastName', 'address', 'city', 'state', 'zip'])),
@@ -998,6 +1001,11 @@ const CheckoutPage = ({
       }
     }
 
+    return newErrors;
+  };
+
+  const validateCheckoutForm = () => {
+    const newErrors = getCheckoutValidationErrors();
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -1537,6 +1545,29 @@ const CheckoutPage = ({
       ? 'Payment unavailable'
       : 'Place order';
 
+  const checkoutRequiredFieldsComplete = useMemo(
+    () => Object.keys(getCheckoutValidationErrors()).length === 0,
+    [authenticated, accountConfirmPassword, accountPassword, billingData, shippingData, shippingSameAsBilling]
+  );
+
+  useEffect(() => {
+    if (!embedded || typeof onEmbeddedStateChange !== 'function') return;
+
+    onEmbeddedStateChange({
+      requiredFieldsComplete: checkoutRequiredFieldsComplete,
+      canPlaceOrder: !placeOrderDisabled,
+      shippingSameAsBilling,
+      paymentMethod: formData.paymentMethod,
+    });
+  }, [
+    checkoutRequiredFieldsComplete,
+    embedded,
+    formData.paymentMethod,
+    onEmbeddedStateChange,
+    placeOrderDisabled,
+    shippingSameAsBilling,
+  ]);
+
   const handleCheckoutSubmit = () => handlePlaceOrder({
     stripe: currentPaymentContext?.stripe || undefined,
     elements: currentPaymentContext?.elements || undefined,
@@ -1544,7 +1575,10 @@ const CheckoutPage = ({
 
   const CheckoutWrapper = embedded ? 'div' : 'main';
   const checkoutContent = (
-    <CheckoutWrapper className={`${embedded ? 'py-0' : 'py-8 pb-28 md:py-12 md:pb-12'} overflow-x-hidden lg:overflow-visible`}>
+    <CheckoutWrapper
+      id={embedded && embeddedRootId ? embeddedRootId : undefined}
+      className={`${embedded ? 'py-0' : 'py-8 pb-28 md:py-12 md:pb-12'} overflow-x-hidden lg:overflow-visible`}
+    >
         <div className="container-custom max-w-5xl">
           {!embedded && (
             <>
@@ -1898,6 +1932,7 @@ const CheckoutPage = ({
 
                 <div className={stickySummaryActionClassName}>
                   <Button
+                    id={embedded && embeddedSubmitButtonId ? embeddedSubmitButtonId : undefined}
                     onClick={handleCheckoutSubmit}
                     disabled={placeOrderDisabled}
                     size="lg"
