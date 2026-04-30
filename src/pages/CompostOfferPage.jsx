@@ -19,6 +19,23 @@ const TRUST_BADGES = [
   'Tracked Shipping',
   'Made to Order',
 ];
+const PRODUCT_BULLETS = [
+  'Soft, lightweight Gildan Softstyle® unisex tee',
+  'Compost-inspired graphic with earthy root and leaf details',
+  'Great for gardeners, compost lovers, and zero-waste folks',
+  'Classic crew neck fit for everyday wear',
+  'Solid colors are made with 100% ring-spun cotton',
+  'Tear-away label for added comfort',
+  'Blank tee uses ethically grown US cotton and is Oeko-Tex certified',
+];
+const CARE_INSTRUCTIONS = [
+  'Machine wash cold, max 30°C / 90°F',
+  'Wash with similar colors',
+  'Tumble dry on low heat',
+  'Iron on low heat if needed',
+  'Do not bleach',
+  'Do not dry clean',
+];
 const BENEFITS = [
   {
     title: 'Soft everyday comfort',
@@ -52,7 +69,7 @@ const FAQS = [
   },
   {
     question: 'Is checkout secure?',
-    answer: 'Yes. Payments are handled through the existing secure checkout flow.',
+    answer: 'Yes. Payments are processed securely.',
   },
   {
     question: 'How do I choose the right size?',
@@ -592,13 +609,13 @@ const CompostOfferPage = () => {
     };
   }, [checkoutStatus.requiredFieldsComplete, loading, selectedColor, selectedSize]);
 
-  return (
+      return (
     <>
       <Helmet>
-        <title>Compost T-Shirt Offer - AnfaStyles</title>
+        <title>Compost Graphic Tee for Gardeners & Compost Lovers</title>
         <meta
           name="description"
-          content="Shop the Compost Graphic T-Shirt with a dedicated one-product landing checkout experience."
+          content="Soft compost graphic tee for gardeners, soil lovers, and zero-waste folks. A playful everyday shirt for people who believe food scraps are future soil."
         />
       </Helmet>
 
@@ -611,15 +628,15 @@ const CompostOfferPage = () => {
             <div className="order-2 space-y-6 lg:order-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary/85">
                 <Leaf className="h-3.5 w-3.5" />
-                Compost collection feature
+                Compost graphic tee offer
               </div>
 
               <div className="space-y-4">
                 <h1 className="max-w-3xl text-4xl font-bold leading-tight text-balance md:text-5xl lg:text-6xl" style={{ letterSpacing: '-0.03em' }}>
-                  Wear the Change. Grow the Future.
+                  Compost Graphic Tee
                 </h1>
                 <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-                  A soft everyday tee for gardeners, compost lovers, and anyone who believes healthy soil can change the world.
+                  Food scraps are future soil. This soft, lightweight compost graphic tee is made for gardeners, compost lovers, and soil-minded folks who like wearing their values in a simple, playful way.
                 </p>
               </div>
 
@@ -728,19 +745,41 @@ const CompostOfferPage = () => {
         <section className="container-custom grid gap-6 py-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:py-12">
           <div className="rounded-[2.5rem] bg-card/60 p-7 shadow-[0_26px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-border/40 md:p-10">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Product story</p>
-            <p className="mt-4 text-lg leading-relaxed text-foreground/90 md:text-xl">
-              This design celebrates the quiet power of compost: turning waste into life, scraps into soil, and small daily choices into real change.
-            </p>
+            <div className="mt-4 space-y-4">
+              <p className="text-lg leading-relaxed text-foreground/90 md:text-xl">
+                For the people who know scraps are not trash.
+              </p>
+              <p className="text-base leading-relaxed text-muted-foreground">
+                This Compost Graphic Tee is made for gardeners, compost lovers, and zero-waste folks who believe good things start in the soil. With an earthy root-and-leaf design, it’s a simple everyday tee that lets you show your compost pride without saying too much.
+              </p>
+              <p className="text-base leading-relaxed text-muted-foreground">
+                Printed on a soft, lightweight Gildan Softstyle® unisex tee, it has a classic crew neck fit that works for garden days, farmers market runs, casual weekends, or as a thoughtful gift for the compost person in your life.
+              </p>
+            </div>
+
+            <div className="mt-7 rounded-2xl bg-background/70 p-4 ring-1 ring-border/40 md:p-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Highlights</p>
+              <ul className="mt-4 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                {PRODUCT_BULLETS.map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           <div className="rounded-[2.5rem] bg-[linear-gradient(135deg,rgba(92,122,68,0.08),rgba(190,213,172,0.16))] p-7 shadow-[0_26px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-primary/15 md:p-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Made to order</p>
-            <p className="mt-4 text-base leading-relaxed text-foreground/85">
-              Each shirt is made to order, helping reduce unnecessary inventory and overproduction. Your tee is printed only when you order it.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              It is designed for comfortable daily wear while keeping the focus on the message and the artwork.
-            </p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Care instructions</p>
+            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+              {CARE_INSTRUCTIONS.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
