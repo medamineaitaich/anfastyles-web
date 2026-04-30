@@ -626,9 +626,9 @@ const CompostGraphicTeeOfferPage = () => {
       <Header onCartClick={() => setCartDrawerOpen(true)} />
       <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
 
-      <main className="overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(160,198,150,0.18),_transparent_40%),linear-gradient(180deg,_rgba(250,247,240,0.98)_0%,_rgba(247,243,233,0.92)_48%,_rgba(255,255,255,1)_100%)] pb-28 md:pb-16">
-        <section className="border-b border-border/50">
-          <div className="container-custom grid gap-10 py-10 md:py-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-14">
+      <main className="relative isolate overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(160,198,150,0.18),_transparent_40%),linear-gradient(180deg,_rgba(250,247,240,0.98)_0%,_rgba(247,243,233,0.92)_48%,_rgba(255,255,255,1)_100%)] pb-28 md:pb-16">
+        <section className="border-b border-border/40">
+          <div className="container-custom grid gap-10 py-12 md:py-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-14 lg:py-20">
             <div className="order-2 space-y-6 lg:order-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary/85">
                 <Leaf className="h-3.5 w-3.5" />
@@ -645,7 +645,7 @@ const CompostGraphicTeeOfferPage = () => {
               </div>
 
               <div className="flex flex-wrap items-end gap-5">
-                <div className="rounded-3xl border border-border/60 bg-card px-5 py-4 shadow-sm">
+                <div className="rounded-3xl bg-card/80 px-5 py-4 shadow-[0_18px_50px_-36px_rgba(86,102,66,0.55)] ring-1 ring-border/50 backdrop-blur">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/75">Offer price</p>
                   <p className="mt-2 text-4xl font-bold text-foreground">
                     {loading ? <span className="text-2xl">Loading...</span> : `$${formatPrice(displayPrice)}`}
@@ -653,23 +653,24 @@ const CompostGraphicTeeOfferPage = () => {
                 </div>
                 <div className="space-y-1 text-sm text-muted-foreground">
                   <p>Choose your color, size, and quantity, then complete your order below.</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-primary/70">Made to order</p>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button size="lg" className="min-w-[220px] rounded-full px-7" onClick={scrollToOrderSection}>
-                  Add to Cart
+                  Order Yours Today
                   <ArrowDown className="ml-2 h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="lg" className="rounded-full px-7" onClick={scrollToOrderSection}>
-                  Pick your color and size
+                  View colors and sizes
                 </Button>
               </div>
 
             </div>
 
             <div className="order-1 lg:order-2">
-              <div className="rounded-[2rem] border border-border/60 bg-card/90 p-4 shadow-[0_20px_60px_-28px_rgba(86,102,66,0.4)] backdrop-blur">
+              <div className="relative rounded-[2.25rem] bg-card/70 p-4 shadow-[0_28px_80px_-48px_rgba(86,102,66,0.55)] ring-1 ring-border/40 backdrop-blur">
                 {loading ? (
                   <Skeleton className="aspect-[4/5] w-full rounded-[1.5rem]" />
                 ) : (
@@ -679,58 +680,71 @@ const CompostGraphicTeeOfferPage = () => {
                     className="aspect-[4/5] w-full rounded-[1.5rem] object-cover"
                   />
                 )}
+
+                <div className="pointer-events-none absolute left-8 top-8 hidden rounded-full bg-background/80 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-foreground shadow-sm ring-1 ring-border/40 backdrop-blur md:inline-flex">
+                  Eco lifestyle staple
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="container-custom py-10 md:py-14">
-          <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Color showcase</p>
-              <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">Choose the look that fits your garden mood</h2>
+        <section className="container-custom py-12 md:py-16">
+          <div className="rounded-[2.75rem] bg-card/45 p-6 shadow-[0_24px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-border/40 md:p-10">
+            <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Color showcase</p>
+                <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">Choose the look that fits your garden mood</h2>
+              </div>
+              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
+                Explore the colors and choose the one that feels most like you.
+              </p>
             </div>
-            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-              Explore the colors and choose the one that feels most like you.
-            </p>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-3">
-            {SHOWCASE_IMAGES.map((image) => {
-              const matchKeys = image.matchKeys || [image.key];
-              const matchingColorOption = colorOptions.find((option) => matchKeys.includes(normalizeOptionValue(option.label)));
-              const isActive = matchKeys.includes(selectedColorKey);
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-3">
+              {SHOWCASE_IMAGES.map((image) => {
+                const matchKeys = image.matchKeys || [image.key];
+                const matchingColorOption = colorOptions.find((option) => matchKeys.includes(normalizeOptionValue(option.label)));
+                const isActive = matchKeys.includes(selectedColorKey);
 
-              return (
-                <button
-                  key={image.key}
-                  type="button"
-                  onClick={() => {
-                    if (matchingColorOption) {
-                      setSelectedColor(matchingColorOption.label);
-                    }
-                    scrollToOrderSection();
-                  }}
-                  className={`overflow-hidden rounded-[1.75rem] border bg-card text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${
-                    isActive ? 'border-primary/60 ring-2 ring-primary/20' : 'border-border/60'
-                  }`}
-                >
-                  <img src={image.src} alt={`${image.label} Compost Graphic Tee`} className="aspect-[4/4.9] w-full object-cover md:aspect-[4/4.6]" />
-                  <div className="space-y-2 px-3.5 py-3.5 md:px-5 md:py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold md:text-base">{image.label}</p>
-                      <span className="text-[0.65rem] uppercase tracking-[0.16em] text-primary/80 md:text-xs">{isActive ? 'Selected' : 'Preview'}</span>
+                return (
+                  <button
+                    key={image.key}
+                    type="button"
+                    onClick={() => {
+                      if (matchingColorOption) {
+                        setSelectedColor(matchingColorOption.label);
+                      }
+                      scrollToOrderSection();
+                    }}
+                    className={`group overflow-hidden rounded-[1.75rem] bg-background/70 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 ${
+                      isActive ? 'ring-2 ring-primary/25' : 'ring-1 ring-border/50'
+                    }`}
+                  >
+                    <div className="relative">
+                      <img
+                        src={image.src}
+                        alt={`${image.label} Compost Graphic Tee`}
+                        className="aspect-[4/4.9] w-full object-cover transition duration-500 group-hover:scale-[1.015] md:aspect-[4/4.6]"
+                      />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/18 via-black/0 to-black/0 opacity-75" />
                     </div>
-                    <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">{image.description}</p>
-                  </div>
-                </button>
-              );
-            })}
+                    <div className="space-y-2 px-3.5 py-3.5 md:px-5 md:py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold md:text-base">{image.label}</p>
+                        <span className="text-[0.65rem] uppercase tracking-[0.16em] text-primary/80 md:text-xs">{isActive ? 'Selected' : 'Preview'}</span>
+                      </div>
+                      <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">{image.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
-        <section className="container-custom grid gap-6 py-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:py-10">
-          <div className="rounded-[2rem] border border-border/60 bg-card p-6 shadow-sm md:p-8">
+        <section className="container-custom grid gap-6 py-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:py-12">
+          <div className="rounded-[2.5rem] bg-card/60 p-7 shadow-[0_26px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-border/40 md:p-10">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Product story</p>
             <div className="mt-4 space-y-4">
               <p className="text-lg leading-relaxed text-foreground/90 md:text-xl">
@@ -744,7 +758,7 @@ const CompostGraphicTeeOfferPage = () => {
               </p>
             </div>
 
-            <div className="mt-7 rounded-2xl border border-border/60 bg-background/70 p-4 md:p-5">
+            <div className="mt-7 rounded-2xl bg-background/70 p-4 ring-1 ring-border/40 md:p-5">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Highlights</p>
               <ul className="mt-4 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
                 {PRODUCT_BULLETS.map((item) => (
@@ -757,7 +771,7 @@ const CompostGraphicTeeOfferPage = () => {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-border/60 bg-[linear-gradient(135deg,rgba(92,122,68,0.08),rgba(190,213,172,0.16))] p-6 shadow-sm md:p-8">
+          <div className="rounded-[2.5rem] bg-[linear-gradient(135deg,rgba(92,122,68,0.08),rgba(190,213,172,0.16))] p-7 shadow-[0_26px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-primary/15 md:p-10">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Care instructions</p>
             <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
               {CARE_INSTRUCTIONS.map((item) => (
@@ -770,104 +784,116 @@ const CompostGraphicTeeOfferPage = () => {
           </div>
         </section>
 
-        <section className="container-custom py-10 md:py-14">
-          <div className="mb-8 max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Why it works</p>
-            <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">A thoughtful tee for soil-minded people</h2>
-          </div>
+        <section className="container-custom py-12 md:py-16">
+          <div className="rounded-[2.75rem] bg-card/45 p-6 shadow-[0_24px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-border/40 md:p-10">
+            <div className="mb-8 max-w-2xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Why it works</p>
+              <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">A thoughtful tee for soil-minded people</h2>
+            </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {BENEFITS.map((benefit) => {
-              const Icon = benefit.icon;
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {BENEFITS.map((benefit) => {
+                const Icon = benefit.icon;
 
-              return (
-                <div key={benefit.title} className="rounded-[1.75rem] border border-border/60 bg-card p-5 shadow-sm">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="mt-5 text-lg font-semibold">{benefit.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{benefit.description}</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="container-custom py-4 md:py-10">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-start">
-            <div className="rounded-[2rem] border border-border/60 bg-card p-6 shadow-sm md:p-8">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Trust seals</p>
-              <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-2">
-                {TRUST_BADGES.map((text) => (
+                return (
                   <div
-                    key={text}
-                    className="grid aspect-square w-full max-w-[6.5rem] place-items-center justify-self-center rounded-full bg-primary p-1 [clip-path:polygon(50%_0%,56%_7%,63%_2%,68%_10%,76%_6%,80%_15%,89%_14%,91%_24%,98%_31%,93%_39%,100%_50%,93%_61%,98%_69%,91%_76%,89%_86%,80%_85%,76%_94%,68%_90%,63%_98%,56%_93%,50%_100%,44%_93%,37%_98%,32%_90%,24%_94%,20%_85%,11%_86%,9%_76%,2%_69%,7%_61%,0%_50%,7%_39%,2%_31%,9%_24%,11%_14%,20%_15%,24%_6%,32%_10%,37%_2%,44%_7%)]"
+                    key={benefit.title}
+                    className="rounded-3xl bg-background/70 p-6 shadow-sm ring-1 ring-border/40 transition hover:-translate-y-0.5 hover:shadow-lg"
                   >
-                    <div className="grid h-full w-full place-items-center rounded-full border border-primary/30 bg-background px-1.5 text-center shadow-sm">
-                      <span className="text-[0.62rem] font-semibold uppercase leading-tight tracking-[0.1em] text-foreground">{text}</span>
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Icon className="h-5 w-5" />
                     </div>
+                    <h3 className="mt-5 text-lg font-semibold">{benefit.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{benefit.description}</p>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
+          </div>
+        </section>
 
-            <div className="rounded-[2rem] border border-border/60 bg-card p-6 shadow-sm md:p-8">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">FAQ</p>
-              <div className="mt-6 divide-y divide-border/60 rounded-[1.5rem] border border-border/60 bg-background/70">
-                {FAQS.map((faq) => (
-                  <div key={faq.question} className="px-5 py-4 md:px-6">
-                    <h3 className="text-base font-semibold">{faq.question}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p>
-                  </div>
-                ))}
+        <section className="container-custom py-10 md:py-12">
+          <div className="rounded-[2.75rem] bg-card/45 p-6 shadow-[0_24px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-border/40 md:p-10">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:items-start">
+              <div className="rounded-[2.5rem] bg-background/70 p-6 shadow-sm ring-1 ring-border/40 md:p-8">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Trust seals</p>
+                <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-2">
+                  {TRUST_BADGES.map((text) => (
+                    <div
+                      key={text}
+                      className="grid aspect-square w-full max-w-[6.25rem] place-items-center justify-self-center rounded-full bg-primary p-1 [clip-path:polygon(50%_0%,56%_7%,63%_2%,68%_10%,76%_6%,80%_15%,89%_14%,91%_24%,98%_31%,93%_39%,100%_50%,93%_61%,98%_69%,91%_76%,89%_86%,80%_85%,76%_94%,68%_90%,63%_98%,56%_93%,50%_100%,44%_93%,37%_98%,32%_90%,24%_94%,20%_85%,11%_86%,9%_76%,2%_69%,7%_61%,0%_50%,7%_39%,2%_31%,9%_24%,11%_14%,20%_15%,24%_6%,32%_10%,37%_2%,44%_7%)]"
+                    >
+                      <div className="grid h-full w-full place-items-center rounded-full border border-primary/30 bg-background px-1.5 text-center shadow-sm">
+                        <span className="text-[0.62rem] font-semibold uppercase leading-tight tracking-[0.1em] text-foreground">{text}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[2.5rem] bg-background/70 p-6 shadow-sm ring-1 ring-border/40 md:p-8">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">FAQ</p>
+                <div className="mt-6 divide-y divide-border/60 rounded-[1.5rem] bg-background/70 ring-1 ring-border/40">
+                  {FAQS.map((faq) => (
+                    <div key={faq.question} className="px-5 py-4 md:px-6">
+                      <h3 className="text-base font-semibold">{faq.question}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section ref={orderSectionRef} className="container-custom scroll-mt-24 py-10 md:py-14">
-          <div className="mb-8 max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Order section</p>
-            <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">Choose your tee and complete checkout here</h2>
-            <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-              Choose your color, size, and quantity, then complete your order below.
-            </p>
-          </div>
-
-          {loading ? (
-            <div className="space-y-6">
-              <Skeleton className="h-[22rem] w-full rounded-[2rem]" />
-              <Skeleton className="h-[38rem] w-full rounded-[2rem]" />
+        <section ref={orderSectionRef} className="container-custom scroll-mt-24 py-12 md:py-16">
+          <div className="rounded-[2.75rem] bg-card/45 p-6 shadow-[0_24px_70px_-54px_rgba(86,102,66,0.55)] ring-1 ring-border/40 md:p-10">
+            <div className="mb-8 max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Order section</p>
+              <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">Choose your tee and complete checkout here</h2>
+              <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+                Choose your color, size, and quantity, then complete your order below.
+              </p>
             </div>
-          ) : (
-            <div className="space-y-8">
-              <ProductOptionsPanel
-                displayPrice={displayPrice}
-                selectedColor={selectedColor}
-                selectedSize={selectedSize}
-                quantity={quantity}
-                colorOptions={colorOptions}
-                sizeOptions={sizeOptions}
-                onColorChange={setSelectedColor}
-                onSizeChange={setSelectedSize}
-                onQuantityChange={setQuantity}
-                colorSectionRef={colorSectionRef}
-                sizeSectionRef={sizeSectionRef}
-              />
 
-              <div ref={checkoutSectionRef} className="rounded-[2rem] border border-border/60 bg-card/80 p-1 shadow-sm">
-                <CheckoutPage
-                  embedded
-                  cartOverride={offerCart}
-                  cartLoadingOverride={loading}
-                  clearCartOverride={async () => ({ items: [], subtotal: 0 })}
-                  embeddedRootId={OFFER_CHECKOUT_ROOT_ID}
-                  embeddedSubmitButtonId={OFFER_PLACE_ORDER_BUTTON_ID}
-                  onEmbeddedStateChange={setCheckoutStatus}
-                />
+            {loading ? (
+              <div className="space-y-6">
+                <Skeleton className="h-[22rem] w-full rounded-[2rem]" />
+                <Skeleton className="h-[38rem] w-full rounded-[2rem]" />
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-8">
+                <ProductOptionsPanel
+                  displayPrice={displayPrice}
+                  selectedColor={selectedColor}
+                  selectedSize={selectedSize}
+                  quantity={quantity}
+                  colorOptions={colorOptions}
+                  sizeOptions={sizeOptions}
+                  onColorChange={setSelectedColor}
+                  onSizeChange={setSelectedSize}
+                  onQuantityChange={setQuantity}
+                  colorSectionRef={colorSectionRef}
+                  sizeSectionRef={sizeSectionRef}
+                />
+
+                <div
+                  ref={checkoutSectionRef}
+                  className="rounded-[2.5rem] bg-background/60 p-2 shadow-sm ring-1 ring-border/40 md:p-3"
+                >
+                  <CheckoutPage
+                    embedded
+                    cartOverride={offerCart}
+                    cartLoadingOverride={loading}
+                    clearCartOverride={async () => ({ items: [], subtotal: 0 })}
+                    embeddedRootId={OFFER_CHECKOUT_ROOT_ID}
+                    embeddedSubmitButtonId={OFFER_PLACE_ORDER_BUTTON_ID}
+                    onEmbeddedStateChange={setCheckoutStatus}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </section>
       </main>
 
