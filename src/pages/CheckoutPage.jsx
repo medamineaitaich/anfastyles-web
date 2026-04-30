@@ -32,7 +32,7 @@ const PAYMENT_METHOD_META = {
   },
   woocommerce_payments: {
     label: 'Credit or debit card',
-    description: 'Processed securely by WooPayments, in partnership with Stripe.',
+    description: 'Secure card payment via WooPayments.',
   },
   cod: {
     label: 'Cash on delivery',
@@ -203,6 +203,41 @@ const splitFullName = (value) => {
     lastName: parts.slice(1).join(' '),
   };
 };
+
+const PaymentBrandBadge = ({ label, children }) => (
+  <span
+    className="inline-flex h-7 items-center justify-center rounded-lg border border-border/70 bg-background px-2 text-xs shadow-sm"
+    aria-label={label}
+    title={label}
+  >
+    {children}
+  </span>
+);
+
+const PaymentBrandRow = () => (
+  <div className="mt-2 flex flex-wrap items-center gap-2">
+    <PaymentBrandBadge label="Visa">
+      <span className="text-[0.7rem] font-extrabold tracking-wide text-[#1A1F71]">VISA</span>
+    </PaymentBrandBadge>
+    <PaymentBrandBadge label="Mastercard">
+      <span className="relative mr-1 inline-block h-4 w-7">
+        <span className="absolute left-0 top-0 h-4 w-4 rounded-full bg-[#EB001B]" />
+        <span className="absolute left-2 top-0 h-4 w-4 rounded-full bg-[#F79E1B] opacity-90" />
+      </span>
+      <span className="text-[0.65rem] font-semibold text-foreground/80">Mastercard</span>
+    </PaymentBrandBadge>
+    <PaymentBrandBadge label="American Express">
+      <span className="rounded bg-[#016FD0] px-1.5 py-0.5 text-[0.62rem] font-bold tracking-wide text-white">AMEX</span>
+    </PaymentBrandBadge>
+    <PaymentBrandBadge label="Maestro">
+      <span className="relative mr-1 inline-block h-4 w-7">
+        <span className="absolute left-0 top-0 h-4 w-4 rounded-full bg-[#CC2131]" />
+        <span className="absolute left-2 top-0 h-4 w-4 rounded-full bg-[#1B66B3] opacity-90" />
+      </span>
+      <span className="text-[0.65rem] font-semibold text-foreground/80">Maestro</span>
+    </PaymentBrandBadge>
+  </div>
+);
 
 const mergeAddressFormValues = (currentValues, nextValues = {}) => {
   const merged = { ...currentValues };
@@ -1782,8 +1817,9 @@ const CheckoutPage = ({
                       <CreditCard className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Pay with credit or debit card</h2>
-                      <p className="text-sm text-muted-foreground">Processed securely by WooPayments, in partnership with Stripe.</p>
+                      <h2 className="text-xl font-bold">Secure Payment</h2>
+                      <PaymentBrandRow />
+                      <p className="mt-2 text-xs text-muted-foreground">Processed securely by WooPayments.</p>
                     </div>
                   </div>
 
