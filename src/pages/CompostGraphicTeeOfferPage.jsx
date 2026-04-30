@@ -19,25 +19,42 @@ const TRUST_BADGES = [
   'Tracked Shipping',
   'Made to Order',
 ];
+const PRODUCT_BULLETS = [
+  'Soft, lightweight Gildan Softstyle® unisex tee',
+  'Compost-inspired graphic with earthy root and leaf details',
+  'Great for gardeners, compost lovers, and zero-waste folks',
+  'Classic crew neck fit for everyday wear',
+  'Solid colors are made with 100% ring-spun cotton',
+  'Tear-away label for added comfort',
+  'Blank tee uses ethically grown US cotton and is Oeko-Tex certified',
+];
+const CARE_INSTRUCTIONS = [
+  'Machine wash cold, max 30°C / 90°F',
+  'Wash with similar colors',
+  'Tumble dry on low heat',
+  'Iron on low heat if needed',
+  'Do not bleach',
+  'Do not dry clean',
+];
 const BENEFITS = [
   {
-    title: 'Fun compost-inspired graphic design',
-    description: 'A playful earthy design for people who see food scraps as garden treasure.',
+    title: 'Soft, lightweight everyday tee',
+    description: 'A comfortable unisex fit that is easy to wear and easy to gift.',
     icon: Leaf,
   },
   {
-    title: 'For gardeners and zero-waste friends',
-    description: 'Great for gardeners, plant lovers, compost fans, and sustainability-minded gift giving.',
+    title: 'Compost-inspired graphic',
+    description: 'Earthy root-and-leaf details for gardeners and soil-minded folks.',
     icon: Sprout,
   },
   {
-    title: 'Easy everyday tee',
-    description: 'Wear it for market days, garden days, around the house, and casual everyday plans.',
+    title: 'Classic crew neck fit',
+    description: 'Made for garden days, farmers market runs, and casual weekends.',
     icon: Recycle,
   },
   {
-    title: 'Nature-inspired colors',
-    description: 'Available in soft colors that keep the soil-and-plants artwork feeling warm and wearable.',
+    title: 'Comfort details',
+    description: 'Tear-away label and a lightweight feel that works year round.',
     icon: CheckCircle2,
   },
 ];
@@ -56,7 +73,7 @@ const FAQS = [
   },
   {
     question: 'Is checkout secure?',
-    answer: 'Yes. Payments are processed through the existing secure checkout flow.',
+    answer: 'Yes. Payments are processed securely.',
   },
   {
     question: 'How do I choose the right size?',
@@ -599,10 +616,10 @@ const CompostGraphicTeeOfferPage = () => {
   return (
     <>
       <Helmet>
-        <title>Compost Graphic Tee - AnfaStyles</title>
+        <title>Compost Graphic Tee for Gardeners & Compost Lovers</title>
         <meta
           name="description"
-          content="Shop the Compost Graphic Tee, a playful earthy tee for compost lovers, gardeners, and zero-waste friends."
+          content="Soft compost graphic tee for gardeners, soil lovers, and zero-waste folks. A playful everyday shirt for people who believe food scraps are future soil."
         />
       </Helmet>
 
@@ -623,7 +640,7 @@ const CompostGraphicTeeOfferPage = () => {
                   Compost Graphic Tee
                 </h1>
                 <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-                  A playful earthy tee for compost lovers, gardeners, and anyone who believes food scraps deserve a second life.
+                  Food scraps are future soil. This soft, lightweight compost graphic tee is made for gardeners, compost lovers, and soil-minded folks who like wearing their values in a simple, playful way.
                 </p>
               </div>
 
@@ -635,8 +652,7 @@ const CompostGraphicTeeOfferPage = () => {
                   </p>
                 </div>
                 <div className="space-y-1 text-sm text-muted-foreground">
-                  <p>Price, color, size, and stock come from the real WooCommerce product.</p>
-                  <p>Choose your tee and complete checkout on this page.</p>
+                  <p>Choose your color, size, and quantity, then complete your order below.</p>
                 </div>
               </div>
 
@@ -716,19 +732,41 @@ const CompostGraphicTeeOfferPage = () => {
         <section className="container-custom grid gap-6 py-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:py-10">
           <div className="rounded-[2rem] border border-border/60 bg-card p-6 shadow-sm md:p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Product story</p>
-            <p className="mt-4 text-lg leading-relaxed text-foreground/90 md:text-xl">
-              For the people who save coffee grounds, veggie scraps, and banana peels like they are garden treasure. This compost graphic tee is made for gardeners, plant lovers, zero-waste folks, and anyone who knows that good soil starts with small everyday choices.
-            </p>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              Wear it to the farmers market, in the garden, around the house, or gift it to the compost-obsessed person in your life.
-            </p>
+            <div className="mt-4 space-y-4">
+              <p className="text-lg leading-relaxed text-foreground/90 md:text-xl">
+                For the people who know scraps are not trash.
+              </p>
+              <p className="text-base leading-relaxed text-muted-foreground">
+                This Compost Graphic Tee is made for gardeners, compost lovers, and zero-waste folks who believe good things start in the soil. With an earthy root-and-leaf design, it’s a simple everyday tee that lets you show your compost pride without saying too much.
+              </p>
+              <p className="text-base leading-relaxed text-muted-foreground">
+                Printed on a soft, lightweight Gildan Softstyle® unisex tee, it has a classic crew neck fit that works for garden days, farmers market runs, casual weekends, or as a thoughtful gift for the compost person in your life.
+              </p>
+            </div>
+
+            <div className="mt-7 rounded-2xl border border-border/60 bg-background/70 p-4 md:p-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Highlights</p>
+              <ul className="mt-4 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                {PRODUCT_BULLETS.map((item) => (
+                  <li key={item} className="flex gap-2">
+                    <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           <div className="rounded-[2rem] border border-border/60 bg-[linear-gradient(135deg,rgba(92,122,68,0.08),rgba(190,213,172,0.16))] p-6 shadow-sm md:p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Made to order</p>
-            <p className="mt-4 text-base leading-relaxed text-foreground/85">
-              Made when you order, this tee helps avoid unnecessary overproduction while giving you a fresh everyday piece made just for you.
-            </p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Care instructions</p>
+            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+              {CARE_INSTRUCTIONS.map((item) => (
+                <li key={item} className="flex gap-2">
+                  <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
