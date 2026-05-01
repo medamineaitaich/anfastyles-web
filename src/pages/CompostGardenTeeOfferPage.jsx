@@ -78,19 +78,20 @@ const FAQS = [
   },
 ];
 const OFFER_ASSET_PATH = '/offers/compost-garden-tee';
-const HERO_IMAGE_DESKTOP = `${OFFER_ASSET_PATH}/reference-natural-desktop.jpg`;
-const HERO_IMAGE_MOBILE = `${OFFER_ASSET_PATH}/reference-natural-mobile.jpg`;
-const GIFT_IMAGE = `${OFFER_ASSET_PATH}/reference-natural-mobile.jpg`;
+const HERO_IMAGE_DESKTOP = `${OFFER_ASSET_PATH}/compost-people-portrait.jpg`;
+const HERO_IMAGE_MOBILE = `${OFFER_ASSET_PATH}/compost-people-portrait.jpg`;
+const GIFT_IMAGE = `${OFFER_ASSET_PATH}/compost-people-poster.jpg`;
 const SHOWCASE_IMAGE_BY_COLOR = {
   'mint-green': `${OFFER_ASSET_PATH}/mint-green.jpg`,
-  pistachio: `${OFFER_ASSET_PATH}/mint-green.jpg`,
+  pistachio: `${OFFER_ASSET_PATH}/pistachio.jpg`,
   'light-green': `${OFFER_ASSET_PATH}/mint-green.jpg`,
   natural: `${OFFER_ASSET_PATH}/natural.jpg`,
   cream: `${OFFER_ASSET_PATH}/natural.jpg`,
+  daisy: `${OFFER_ASSET_PATH}/daisy.jpg`,
   'light-blue': `${OFFER_ASSET_PATH}/light-blue.jpg`,
-  'light-pink': `${OFFER_ASSET_PATH}/pink.jpg`,
+  'light-pink': `${OFFER_ASSET_PATH}/light-pink.jpg`,
   pink: `${OFFER_ASSET_PATH}/pink.jpg`,
-  azalea: `${OFFER_ASSET_PATH}/pink.jpg`,
+  azalea: `${OFFER_ASSET_PATH}/azalea.jpg`,
   'ice-grey': `${OFFER_ASSET_PATH}/gray.jpg`,
   'ice-gray': `${OFFER_ASSET_PATH}/gray.jpg`,
   grey: `${OFFER_ASSET_PATH}/gray.jpg`,
@@ -689,27 +690,22 @@ const CompostGardenTeeOfferPage = () => {
             </div>
 
             <div className="order-1 lg:order-2">
-              <div className="rounded-[2rem] border border-border/60 bg-card/90 p-4 shadow-[0_20px_60px_-28px_rgba(86,102,66,0.4)] backdrop-blur">
-                {loading ? (
-                  <Skeleton className="aspect-[4/5] w-full rounded-[1.5rem]" />
-                ) : (
-                  <img
-                    src={HERO_IMAGE_DESKTOP}
-                    alt="Compost graphic tee lifestyle image"
-                    className="hidden aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:block"
-                    width="1122"
-                    height="1402"
-                  />
-                )}
-                {!loading && (
-                  <img
-                    src={HERO_IMAGE_MOBILE}
-                    alt="Compost graphic tee lifestyle image"
-                    className="aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:hidden"
-                    width="864"
-                    height="1742"
-                  />
-                )}
+              <div className="relative rounded-[2rem] border border-border/60 bg-card/90 p-4 shadow-[0_20px_60px_-28px_rgba(86,102,66,0.4)] backdrop-blur">
+                <img
+                  src={HERO_IMAGE_DESKTOP}
+                  alt="Compost graphic tee lifestyle image"
+                  className="hidden aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:block"
+                  width="1122"
+                  height="1402"
+                />
+                <img
+                  src={HERO_IMAGE_MOBILE}
+                  alt="Compost graphic tee lifestyle image"
+                  className="aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:hidden"
+                  width="1122"
+                  height="1402"
+                />
+                {loading ? <div className="pointer-events-none absolute inset-0"><Skeleton className="h-full w-full rounded-[1.5rem]" /></div> : null}
               </div>
             </div>
           </div>
@@ -892,7 +888,7 @@ const CompostGardenTeeOfferPage = () => {
                 sizeSectionRef={sizeSectionRef}
               />
 
-              <div ref={checkoutSectionRef} className="rounded-[2rem] border border-border/60 bg-card/80 p-1 shadow-sm">
+              <div ref={checkoutSectionRef}>
                 <CheckoutPage
                   embedded
                   cartOverride={offerCart}
