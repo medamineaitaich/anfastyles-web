@@ -78,9 +78,9 @@ const FAQS = [
   },
 ];
 const OFFER_ASSET_PATH = '/offers/compost-garden-tee';
-const HERO_IMAGE_DESKTOP = `${OFFER_ASSET_PATH}/compost-people-portrait.jpg`;
-const HERO_IMAGE_MOBILE = `${OFFER_ASSET_PATH}/compost-people-portrait.jpg`;
-const GIFT_IMAGE = `${OFFER_ASSET_PATH}/compost-people-poster.jpg`;
+const HERO_IMAGE_DESKTOP = `${OFFER_ASSET_PATH}/natural.jpg`;
+const HERO_IMAGE_MOBILE = `${OFFER_ASSET_PATH}/mint-green.jpg`;
+const GIFT_IMAGE = `${OFFER_ASSET_PATH}/ice-grey.jpg`;
 const SHOWCASE_IMAGE_BY_COLOR = {
   'mint-green': `${OFFER_ASSET_PATH}/mint-green.jpg`,
   pistachio: `${OFFER_ASSET_PATH}/pistachio.jpg`,
@@ -691,20 +691,20 @@ const CompostGardenTeeOfferPage = () => {
 
             <div className="order-1 lg:order-2">
               <div className="relative rounded-[2rem] border border-border/60 bg-card/90 p-4 shadow-[0_20px_60px_-28px_rgba(86,102,66,0.4)] backdrop-blur">
-                <img
-                  src={HERO_IMAGE_DESKTOP}
-                  alt="Compost graphic tee lifestyle image"
-                  className="hidden aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:block"
-                  width="1122"
-                  height="1402"
-                />
-                <img
-                  src={HERO_IMAGE_MOBILE}
-                  alt="Compost graphic tee lifestyle image"
-                  className="aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:hidden"
-                  width="1122"
-                  height="1402"
-                />
+                  <img
+                    src={HERO_IMAGE_DESKTOP}
+                    alt="Compost graphic tee lifestyle image"
+                    className="hidden aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:block"
+                    width="1122"
+                    height="1402"
+                  />
+                  <img
+                    src={HERO_IMAGE_MOBILE}
+                    alt="Compost graphic tee lifestyle image"
+                    className="aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:hidden"
+                    width="1122"
+                    height="1402"
+                  />
                 {loading ? <div className="pointer-events-none absolute inset-0"><Skeleton className="h-full w-full rounded-[1.5rem]" /></div> : null}
               </div>
             </div>
@@ -777,22 +777,24 @@ const CompostGardenTeeOfferPage = () => {
                   }`}
                 >
                   <div className={`overflow-hidden rounded-[1.5rem] border bg-background/90 transition ${isActive ? 'border-primary/60 shadow-[0_16px_40px_-28px_rgba(86,102,66,0.55)]' : 'border-border/60'}`}>
-                    {slide.src ? (
-                      <img
-                        src={slide.src}
-                        alt={`${slide.label} Compost Graphic Tee`}
-                        className="aspect-[4/4.9] w-full object-cover"
-                        loading="lazy"
-                        width="900"
-                        height="1100"
-                      />
-                    ) : (
-                      <div className="grid aspect-[4/4.9] place-items-center bg-[linear-gradient(180deg,_rgba(248,246,239,0.95),_rgba(239,234,220,0.9))] px-6">
-                        <div className="text-center">
-                          <div className="mx-auto h-16 w-16 rounded-full border border-black/10 shadow-inner" style={getColorSwatchStyle(slide.label)} />
-                          <p className="mt-4 text-sm font-semibold text-foreground">{slide.label}</p>
+                      {slide.src ? (
+                        <div className="grid aspect-[4/4.9] place-items-center bg-white px-6">
+                          <img
+                            src={slide.src}
+                            alt={`${slide.label} Compost Graphic Tee`}
+                            className="h-full w-auto object-contain"
+                            loading="lazy"
+                            width="900"
+                            height="1100"
+                          />
                         </div>
-                      </div>
+                      ) : (
+                        <div className="grid aspect-[4/4.9] place-items-center bg-white px-6">
+                          <div className="text-center">
+                            <div className="mx-auto h-16 w-16 rounded-full border border-black/10 shadow-inner" style={getColorSwatchStyle(slide.label)} />
+                            <p className="mt-4 text-sm font-semibold text-foreground">{slide.label}</p>
+                          </div>
+                        </div>
                     )}
                   </div>
                   <p className="mt-3 text-sm font-semibold text-foreground">{slide.label}</p>
