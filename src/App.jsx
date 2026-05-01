@@ -10,6 +10,7 @@ import ShopPage from './pages/ShopPage.jsx';
 import ProductDetailPage from './pages/ProductDetailPage.jsx';
 import CompostOfferPage from './pages/CompostOfferPage.jsx';
 import CompostGraphicTeeOfferPage from './pages/CompostGraphicTeeOfferPage.jsx';
+import CompostGardenTeeOfferPage from './pages/CompostGardenTeeOfferPage.jsx';
 import CartPage from './pages/CartPage.jsx';
 import CheckoutPage from './pages/CheckoutPage.jsx';
 import OrderConfirmationPage from './pages/OrderConfirmationPage.jsx';
@@ -47,6 +48,7 @@ function App() {
             <Route path="/product/:id" element={<ProductDetailPage />} />
             <Route path="/offer/compost-t-shirt" element={<CompostOfferPage />} />
             <Route path="/offer/compost-graphic-tee" element={<CompostGraphicTeeOfferPage />} />
+            <Route path="/offer/compost-garden-tee" element={<CompostGardenTeeOfferPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/order-confirmation" element={<OrderConfirmationPage />} />
