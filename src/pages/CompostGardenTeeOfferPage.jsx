@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
-import { ArrowDown, ChevronLeft, ChevronRight, Gift, Globe2, Heart, Leaf, Minus, Plus, Recycle, Sprout } from 'lucide-react';
+import { ArrowDown, Gift, Globe2, Heart, Leaf, Minus, Plus, Recycle, Sprout, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import apiServerClient from '@/lib/apiServerClient';
@@ -78,8 +78,8 @@ const FAQS = [
   },
 ];
 const OFFER_ASSET_PATH = '/offers/compost-garden-tee';
-const HERO_IMAGE_DESKTOP = `${OFFER_ASSET_PATH}/natural.jpg`;
-const HERO_IMAGE_MOBILE = `${OFFER_ASSET_PATH}/mint-green.jpg`;
+const HERO_IMAGE_DESKTOP = `${OFFER_ASSET_PATH}/compost-people-wide.jpg`;
+const HERO_IMAGE_MOBILE = `${OFFER_ASSET_PATH}/compost-people-portrait.jpg`;
 const GIFT_IMAGE = `${OFFER_ASSET_PATH}/ice-grey.jpg`;
 const SHOWCASE_IMAGE_BY_COLOR = {
   'mint-green': `${OFFER_ASSET_PATH}/mint-green.jpg`,
@@ -583,12 +583,6 @@ const CompostGardenTeeOfferPage = () => {
   const scrollToRef = (ref) => {
     ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-  const scrollShowcase = (direction) => {
-    const container = showcaseCarouselRef.current;
-    if (!container) return;
-    const amount = Math.max(280, Math.floor(container.clientWidth * 0.82));
-    container.scrollBy({ left: direction * amount, behavior: 'smooth' });
-  };
 
   const stickyCtaState = useMemo(() => {
     if (loading) {
@@ -648,33 +642,44 @@ const CompostGardenTeeOfferPage = () => {
 
       <main className="overflow-x-hidden bg-[linear-gradient(180deg,_rgba(250,247,240,0.98)_0%,_rgba(247,243,233,0.86)_48%,_rgba(255,255,255,1)_100%)] pb-28 md:pb-16">
         <section className="border-b border-border/50">
-          <div className="container-custom grid gap-10 py-10 md:py-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-center lg:gap-14">
-            <div className="order-2 space-y-6 lg:order-1">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary/85">
-                <Leaf className="h-3.5 w-3.5" />
-                Compost graphic tee offer
+          <div className="container-custom grid gap-10 py-10 md:py-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:gap-16">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary/85">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary">
+                  <Leaf className="h-3.5 w-3.5" />
+                </span>
+                Compost graphic tee
               </div>
 
               <div className="space-y-4">
-                <h1 className="max-w-3xl text-4xl font-bold leading-tight text-balance md:text-5xl lg:text-6xl" style={{ letterSpacing: '-0.03em' }}>
-                  Wear Your Compost Pride
+                <h1 className="max-w-3xl font-serif text-4xl font-semibold leading-tight text-balance md:text-5xl lg:text-6xl" style={{ letterSpacing: '-0.03em' }}>
+                  For the Compost People
                 </h1>
                 <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
-                  Food scraps are future soil. This soft compost graphic tee is made for gardeners, soil lovers, and zero-waste folks who like wearing their values in a simple, playful way.
+                  A tee for soil lovers, scrap savers, and plant people.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-end gap-5">
-                <div className="rounded-3xl border border-border/60 bg-card px-5 py-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/75">Price</p>
-                  <p className="mt-2 text-4xl font-bold text-foreground">
-                    {loading ? <span className="text-2xl">Loading...</span> : `$${formatPrice(displayPrice)}`}
-                  </p>
+              <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-primary/80" />
+                  Wear your values.
                 </div>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <p>Available in multiple soft colors.</p>
-                  <p>Choose your color, size, and quantity below.</p>
+                <div className="flex items-center gap-2">
+                  <Sprout className="h-4 w-4 text-primary/80" />
+                  Start conversations.
                 </div>
+                <div className="flex items-center gap-2">
+                  <Globe2 className="h-4 w-4 text-primary/80" />
+                  Support a better planet.
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-end gap-4">
+                <p className="text-3xl font-semibold text-foreground">
+                  {loading ? <span className="text-xl">Loading...</span> : `$${formatPrice(displayPrice)}`}
+                </p>
+                <p className="text-sm text-muted-foreground">Available in multiple soft colors.</p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
@@ -683,29 +688,29 @@ const CompostGardenTeeOfferPage = () => {
                   <ArrowDown className="ml-2 h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="lg" className="rounded-full px-7" onClick={() => scrollToRef(giftSectionRef)}>
+                  <Gift className="mr-2 h-4 w-4" />
                   Gift This Tee
                 </Button>
               </div>
-
             </div>
 
-            <div className="order-1 lg:order-2">
-              <div className="relative rounded-[2rem] border border-border/60 bg-card/90 p-4 shadow-[0_20px_60px_-28px_rgba(86,102,66,0.4)] backdrop-blur">
-                  <img
-                    src={HERO_IMAGE_DESKTOP}
-                    alt="Compost graphic tee lifestyle image"
-                    className="hidden aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:block"
-                    width="1122"
-                    height="1402"
-                  />
-                  <img
-                    src={HERO_IMAGE_MOBILE}
-                    alt="Compost graphic tee lifestyle image"
-                    className="aspect-[4/5] w-full rounded-[1.5rem] object-cover object-right md:hidden"
-                    width="1122"
-                    height="1402"
-                  />
-                {loading ? <div className="pointer-events-none absolute inset-0"><Skeleton className="h-full w-full rounded-[1.5rem]" /></div> : null}
+            <div>
+              <div className="relative overflow-hidden rounded-[2.25rem] bg-[#f7f2e7]/70 shadow-[0_24px_70px_-36px_rgba(86,102,66,0.45)]">
+                <img
+                  src={HERO_IMAGE_DESKTOP}
+                  alt="Compost graphic tee lifestyle image"
+                  className="hidden aspect-[4/5] w-full object-cover object-right md:block"
+                  width="1122"
+                  height="1402"
+                />
+                <img
+                  src={HERO_IMAGE_MOBILE}
+                  alt="Compost graphic tee lifestyle image"
+                  className="aspect-[4/5] w-full object-cover object-right md:hidden"
+                  width="1122"
+                  height="1402"
+                />
+                {loading ? <div className="pointer-events-none absolute inset-0"><Skeleton className="h-full w-full" /></div> : null}
               </div>
             </div>
           </div>
@@ -731,29 +736,9 @@ const CompostGardenTeeOfferPage = () => {
         </section>
 
         <section className="container-custom py-10 md:py-14">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Color carousel</p>
-              <h2 className="mt-2 text-3xl font-bold text-balance md:text-4xl">Pick Your Favorite Color</h2>
-            </div>
-            <div className="hidden items-center gap-2 md:flex">
-              <button
-                type="button"
-                onClick={() => scrollShowcase(-1)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground transition hover:border-primary/40 hover:text-primary"
-                aria-label="Scroll colors left"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollShowcase(1)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background/80 text-foreground transition hover:border-primary/40 hover:text-primary"
-                aria-label="Scroll colors right"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+          <div className="mb-6 text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Pick Your Favorite Color</p>
+            <h2 className="mt-2 font-serif text-3xl font-semibold text-balance md:text-4xl">Choose your vibe</h2>
           </div>
 
           <div
@@ -816,7 +801,11 @@ const CompostGardenTeeOfferPage = () => {
           <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:grid-cols-3 md:overflow-visible">
             {TESTIMONIALS.map((testimonial) => (
               <div key={testimonial.author} className="min-w-[82%] shrink-0 snap-start rounded-[1.5rem] bg-white/70 p-5 shadow-[0_18px_40px_-34px_rgba(86,102,66,0.55)] md:min-w-0">
-                <p className="text-primary">★★★★★</p>
+                <div className="flex items-center gap-0.5 text-primary" aria-label="5 star rating">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <Star key={index} className="h-4 w-4" fill="currentColor" />
+                  ))}
+                </div>
                 <p className="mt-4 text-base leading-relaxed text-foreground/90">"{testimonial.quote}"</p>
                 <p className="mt-4 text-sm font-medium text-muted-foreground">- {testimonial.author}</p>
               </div>
@@ -838,7 +827,7 @@ const CompostGardenTeeOfferPage = () => {
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Gift idea</p>
               <h2 className="mt-3 text-3xl font-bold text-balance md:text-4xl">A Thoughtful Gift for the Compost Person in Your Life</h2>
               <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
-                Know someone who talks about soil, scraps, and garden beds like it is a love language? This tee says, “I get you.”
+                Know someone who talks about soil, scraps, and garden beds like it is a love language? This tee says, "I get you."
               </p>
               <Button className="mt-6 rounded-full px-7" onClick={scrollToOrderSection}>
                 Gift This Tee
