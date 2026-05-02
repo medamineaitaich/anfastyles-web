@@ -52,6 +52,23 @@ const LANDING_SLICES = [
 
 const OFFER_CHECKOUT_ROOT_ID = 'compost-pride-offer-checkout';
 const OFFER_PLACE_ORDER_BUTTON_ID = 'compost-pride-offer-place-order';
+const TEE_THUMBNAIL_FALLBACK = '/offers/compost/compost-white.jpg';
+
+const TEE_THUMBNAIL_BY_COLOR = {
+  white: '/offers/compost/compost-white.jpg',
+  natural: '/offers/compost/compost-natural.jpg',
+  cream: '/offers/compost/compost-natural.jpg',
+  pistachio: '/offers/compost/compost-mint-green.jpg',
+  'mint-green': '/offers/compost/compost-mint-green.jpg',
+  'light-green': '/offers/compost/compost-mint-green.jpg',
+  'light-blue': '/offers/compost/compost-light-blue.jpg',
+  'light-pink': '/offers/compost/compost-pink.jpg',
+  azalea: '/offers/compost/compost-pink.jpg',
+  grey: '/offers/compost/compost-grey.jpg',
+  gray: '/offers/compost/compost-grey.jpg',
+  'ice-grey': '/offers/compost/compost-grey.jpg',
+  'ice-gray': '/offers/compost/compost-grey.jpg',
+};
 
 const normalizeOptionValue = (value) => String(value || '')
   .trim()
@@ -172,6 +189,11 @@ const colorToSwatch = (value) => {
   return map[key] || '#e5e7eb';
 };
 
+const resolveTeeThumbnail = (colorValue) => {
+  const normalized = normalizeOptionValue(colorValue);
+  return TEE_THUMBNAIL_BY_COLOR[normalized] || TEE_THUMBNAIL_FALLBACK;
+};
+
 export default function CompostPrideImageOfferPage() {
   const purchaseRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -248,6 +270,7 @@ export default function CompostPrideImageOfferPage() {
           variationId: selectedVariation.id,
           name: product?.name || 'Compost Graphic Tee',
           price: Number(displayPrice) || 0,
+          image: resolveTeeThumbnail(selectedColor),
           quantity,
           color: selectedColor,
           size: selectedSize,
