@@ -7,7 +7,48 @@ import apiServerClient from '@/lib/apiServerClient';
 import CheckoutPage from '@/pages/CheckoutPage.jsx';
 
 const COMPOST_PRODUCT_ID = 8572;
-const LANDING_IMAGE_SRC = '/offers/compost-pride/landing.png';
+const LANDING_SLICES = [
+  {
+    key: 'hero',
+    width: 724,
+    height: 650,
+    eager: true,
+    src: '/offers/compost-pride/slices/hero.png',
+    src1080: '/offers/compost-pride/slices/hero@1080.png',
+  },
+  {
+    key: 'benefits',
+    width: 724,
+    height: 470,
+    eager: false,
+    src: '/offers/compost-pride/slices/benefits.png',
+    src1080: '/offers/compost-pride/slices/benefits@1080.png',
+  },
+  {
+    key: 'comparison',
+    width: 724,
+    height: 420,
+    eager: false,
+    src: '/offers/compost-pride/slices/comparison.png',
+    src1080: '/offers/compost-pride/slices/comparison@1080.png',
+  },
+  {
+    key: 'lifestyle',
+    width: 724,
+    height: 430,
+    eager: false,
+    src: '/offers/compost-pride/slices/lifestyle.png',
+    src1080: '/offers/compost-pride/slices/lifestyle@1080.png',
+  },
+  {
+    key: 'cta',
+    width: 724,
+    height: 202,
+    eager: false,
+    src: '/offers/compost-pride/slices/cta.png',
+    src1080: '/offers/compost-pride/slices/cta@1080.png',
+  },
+];
 
 const OFFER_CHECKOUT_ROOT_ID = 'compost-pride-offer-checkout';
 const OFFER_PLACE_ORDER_BUTTON_ID = 'compost-pride-offer-place-order';
@@ -227,12 +268,21 @@ export default function CompostPrideImageOfferPage() {
       <main className="bg-background overflow-x-hidden">
         <div className="w-full bg-[#f6f1e7]">
           <div className="relative mx-auto w-full max-w-[724px]">
-            <img
-              src={LANDING_IMAGE_SRC}
-              alt="Compost Graphic Tee offer creative"
-              className="block h-auto w-full"
-              loading="eager"
-            />
+            {LANDING_SLICES.map((slice) => (
+              <img
+                key={slice.key}
+                src={slice.src}
+                srcSet={`${slice.src} ${slice.width}w, ${slice.src1080} 1080w`}
+                sizes="(max-width: 724px) 100vw, 724px"
+                width={slice.width}
+                height={slice.height}
+                alt="Compost Graphic Tee offer creative"
+                className="block h-auto w-full"
+                loading={slice.eager ? 'eager' : 'lazy'}
+                decoding={slice.eager ? 'sync' : 'async'}
+                fetchPriority={slice.eager ? 'high' : 'auto'}
+              />
+            ))}
 
             {/* Transparent click overlays for the visible SHOP NOW buttons in the creative. */}
             <button
@@ -256,9 +306,9 @@ export default function CompostPrideImageOfferPage() {
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
                 left: '7%',
-                top: '90.2%',
+                top: '94.3%',
                 width: '52%',
-                height: '5.2%',
+                height: '5.6%',
                 background: 'transparent',
               }}
             />
