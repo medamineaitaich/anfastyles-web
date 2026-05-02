@@ -511,6 +511,7 @@ const CheckoutPage = ({
   const [billingData, setBillingData] = useState(() => createAddressFormState());
   const [shippingData, setShippingData] = useState(() => createAddressFormState());
   const [shippingSameAsBilling, setShippingSameAsBilling] = useState(true);
+  const [createAccountOptIn, setCreateAccountOptIn] = useState(false);
   const [accountPassword, setAccountPassword] = useState('');
   const [accountConfirmPassword, setAccountConfirmPassword] = useState('');
   const [profilePrefillKey, setProfilePrefillKey] = useState('');
@@ -921,6 +922,14 @@ const CheckoutPage = ({
     });
   };
 
+  useEffect(() => {
+    if (!authenticated) return;
+    setCreateAccountOptIn(false);
+    setAccountPassword('');
+    setAccountConfirmPassword('');
+    clearAccountErrors();
+  }, [authenticated]);
+
   const handleAccountFieldChange = (field, value) => {
     if (field === 'password') {
       setAccountPassword(value);
@@ -954,6 +963,7 @@ const CheckoutPage = ({
   };
 
   const validateAccountField = (field, value) => {
+    if (authenticated || !createAccountOptIn) return null;
     const trimmedValue = String(value || '').trim();
 
     if (!trimmedValue) {
@@ -972,6 +982,7 @@ const CheckoutPage = ({
   };
 
   const handleAccountFieldBlur = (field) => {
+    if (authenticated || !createAccountOptIn) return;
     const value = field === 'password' ? accountPassword : accountConfirmPassword;
     const nextMessage = validateAccountField(field, value);
     const errorKey = getAccountErrorKey(field);
@@ -1022,7 +1033,7 @@ const CheckoutPage = ({
       ...(shippingSameAsBilling ? {} : getAddressValidationErrors('shipping', shippingData, ['firstName', 'lastName', 'address', 'city', 'state', 'zip'])),
     };
 
-    if (!authenticated) {
+    if (!authenticated && createAccountOptIn) {
       if (!accountPassword) {
         newErrors[getAccountErrorKey('password')] = 'Password is required';
       } else if (accountPassword.length < 8) {
@@ -1061,7 +1072,7 @@ const CheckoutPage = ({
       let paymentData = null;
       let paymentMethodGateway = formData.paymentMethod;
       let checkoutUser = authenticated ? user : null;
-      const createAccountDuringCheckout = !authenticated;
+      const createAccountDuringCheckout = !authenticated && createAccountOptIn;
       const storeFetch = async (path, { method = 'GET', body, store } = {}) => {
         const headers = { 'Content-Type': 'application/json' };
         if (store?.nonce) headers['x-store-nonce'] = store.nonce;
@@ -1208,13 +1219,13 @@ const CheckoutPage = ({
             shippingSameAsBilling,
           });
 
-          if (authenticated && !createAccountDuringCheckout) {
+          if (authenticated) {
             notifySuccess('Addresses updated', 'Your saved account addresses were refreshed for future checkouts.');
           }
         } catch (syncError) {
           console.error('Checkout profile sync error:', syncError);
 
-          if (authenticated && !createAccountDuringCheckout) {
+          if (authenticated) {
             notifyError('Order placed, but profile sync failed', 'Your order went through, but we could not save these addresses to your account.');
           }
         }
@@ -1582,7 +1593,7 @@ const CheckoutPage = ({
 
   const checkoutRequiredFieldsComplete = useMemo(
     () => Object.keys(getCheckoutValidationErrors()).length === 0,
-    [authenticated, accountConfirmPassword, accountPassword, billingData, shippingData, shippingSameAsBilling]
+    [authenticated, createAccountOptIn, accountConfirmPassword, accountPassword, billingData, shippingData, shippingSameAsBilling]
   );
 
   useEffect(() => {
@@ -1650,61 +1661,79 @@ const CheckoutPage = ({
                   />
 
                   {!authenticated && (
-                    <div className="mt-5 rounded-xl border border-border/60 bg-background/40 px-4 py-4">
-                      <div className="space-y-1">
-                        <p className="font-semibold">
-                          Your account will be created during checkout
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Set a password now so you can access your order history and checkout faster next time.
-                        </p>
+                    <div className="mt-5 space-y-4 rounded-xl border border-border/60 bg-background/40 px-4 py-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="createAccountDuringCheckout"
+                          checked={createAccountOptIn}
+                          onCheckedChange={(checked) => {
+                            const nextChecked = checked === true;
+                            setCreateAccountOptIn(nextChecked);
+
+                            if (!nextChecked) {
+                              setAccountPassword('');
+                              setAccountConfirmPassword('');
+                              clearAccountErrors();
+                            }
+                          }}
+                        />
+                        <div className="space-y-1">
+                          <Label htmlFor="createAccountDuringCheckout" className="cursor-pointer font-semibold">
+                            Create an account
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Optional. Create a password to access order history and checkout faster next time.
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="mt-4 grid gap-4 md:grid-cols-2">
-                        <div>
-                          <Label htmlFor="checkout-password">Password *</Label>
-                          <PasswordInput
-                            id="checkout-password"
-                            value={accountPassword}
-                            onChange={(event) => handleAccountFieldChange('password', event.target.value)}
-                            onBlur={() => handleAccountFieldBlur('password')}
-                            autoComplete="new-password"
-                            required
-                            aria-invalid={Boolean(errors[getAccountErrorKey('password')])}
-                          />
-                          {errors[getAccountErrorKey('password')] && (
-                            <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('password')]}</p>
+                      {createAccountOptIn && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div>
+                            <Label htmlFor="checkout-password">Password *</Label>
+                            <PasswordInput
+                              id="checkout-password"
+                              value={accountPassword}
+                              onChange={(event) => handleAccountFieldChange('password', event.target.value)}
+                              onBlur={() => handleAccountFieldBlur('password')}
+                              autoComplete="new-password"
+                              required
+                              aria-invalid={Boolean(errors[getAccountErrorKey('password')])}
+                            />
+                            {errors[getAccountErrorKey('password')] && (
+                              <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('password')]}</p>
+                            )}
+                          </div>
+
+                          <div>
+                            <Label htmlFor="checkout-confirm-password">Confirm password *</Label>
+                            <PasswordInput
+                              id="checkout-confirm-password"
+                              value={accountConfirmPassword}
+                              onChange={(event) => handleAccountFieldChange('confirmPassword', event.target.value)}
+                              onBlur={() => handleAccountFieldBlur('confirmPassword')}
+                              autoComplete="new-password"
+                              required
+                              aria-invalid={Boolean(errors[getAccountErrorKey('confirmPassword')])}
+                            />
+                            {errors[getAccountErrorKey('confirmPassword')] && (
+                              <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('confirmPassword')]}</p>
+                            )}
+                          </div>
+
+                          {errors[getAccountErrorKey('email')] && (
+                            <div className="md:col-span-2">
+                              <p className="text-sm text-destructive">{errors[getAccountErrorKey('email')]}</p>
+                            </div>
+                          )}
+
+                          {errors[getAccountErrorKey('general')] && (
+                            <div className="md:col-span-2">
+                              <p className="text-sm text-destructive">{errors[getAccountErrorKey('general')]}</p>
+                            </div>
                           )}
                         </div>
-
-                        <div>
-                          <Label htmlFor="checkout-confirm-password">Confirm password *</Label>
-                          <PasswordInput
-                            id="checkout-confirm-password"
-                            value={accountConfirmPassword}
-                            onChange={(event) => handleAccountFieldChange('confirmPassword', event.target.value)}
-                            onBlur={() => handleAccountFieldBlur('confirmPassword')}
-                            autoComplete="new-password"
-                            required
-                            aria-invalid={Boolean(errors[getAccountErrorKey('confirmPassword')])}
-                          />
-                          {errors[getAccountErrorKey('confirmPassword')] && (
-                            <p className="mt-1 text-sm text-destructive">{errors[getAccountErrorKey('confirmPassword')]}</p>
-                          )}
-                        </div>
-
-                        {errors[getAccountErrorKey('email')] && (
-                          <div className="md:col-span-2">
-                            <p className="text-sm text-destructive">{errors[getAccountErrorKey('email')]}</p>
-                          </div>
-                        )}
-
-                        {errors[getAccountErrorKey('general')] && (
-                          <div className="md:col-span-2">
-                            <p className="text-sm text-destructive">{errors[getAccountErrorKey('general')]}</p>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
 
