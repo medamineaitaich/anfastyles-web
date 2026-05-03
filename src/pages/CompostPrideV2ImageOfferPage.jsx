@@ -365,37 +365,65 @@ export default function CompostPrideV2ImageOfferPage() {
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
                 left: '7%',
-                top: '16.1%',
-                width: '46%',
-                height: '2.3%',
+                top: '11.2%',
+                width: '52%',
+                height: '3.6%',
                 background: 'transparent',
               }}
             />
 
             <button
               type="button"
-              onClick={() => scrollToPurchase('Order Now (Mid)')}
+              onClick={() => scrollToPurchase('Order Now (Divider 1)')}
               aria-label="Order the Compost Graphic Tee"
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
-                left: '28%',
-                top: '56.7%',
-                width: '44%',
-                height: '2.2%',
+                left: '27%',
+                top: '22.9%',
+                width: '46%',
+                height: '2.8%',
                 background: 'transparent',
               }}
             />
 
             <button
               type="button"
-              onClick={() => scrollToPurchase('Shop Now (Bottom)')}
+              onClick={() => scrollToPurchase('Order Now (Divider 2)')}
+              aria-label="Order the Compost Graphic Tee"
+              className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              style={{
+                left: '27%',
+                top: '56.6%',
+                width: '46%',
+                height: '2.8%',
+                background: 'transparent',
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => scrollToPurchase('Shop Now (Final CTA)')}
               aria-label="Shop the Compost Graphic Tee"
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
-                left: '12%',
-                top: '90.8%',
+                left: '7%',
+                top: '80.9%',
+                width: '58%',
+                height: '3.5%',
+                background: 'transparent',
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => scrollToPurchase('Order Now (Final)')}
+              aria-label="Order the Compost Graphic Tee"
+              className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              style={{
+                left: '24%',
+                top: '88.4%',
                 width: '52%',
-                height: '2.3%',
+                height: '3.0%',
                 background: 'transparent',
               }}
             />
