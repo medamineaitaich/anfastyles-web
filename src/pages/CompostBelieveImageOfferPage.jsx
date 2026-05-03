@@ -365,9 +365,9 @@ export default function CompostBelieveImageOfferPage() {
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
                 left: '27%',
-                top: '12.2%',
+                top: '20.2%',
                 width: '46%',
-                height: '2.6%',
+                height: '3.0%',
                 background: 'transparent',
               }}
             />
@@ -379,9 +379,9 @@ export default function CompostBelieveImageOfferPage() {
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
                 left: '27%',
-                top: '41.9%',
+                top: '54.6%',
                 width: '46%',
-                height: '2.6%',
+                height: '3.0%',
                 background: 'transparent',
               }}
             />
@@ -392,10 +392,10 @@ export default function CompostBelieveImageOfferPage() {
               aria-label="Order the Compost Graphic Tee"
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
-                left: '20%',
-                top: '96.6%',
-                width: '60%',
-                height: '2.7%',
+                left: '5%',
+                top: '94.4%',
+                width: '90%',
+                height: '5.1%',
                 background: 'transparent',
               }}
             />
