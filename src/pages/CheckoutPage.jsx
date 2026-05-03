@@ -486,6 +486,7 @@ const CheckoutPage = ({
   onEmbeddedStateChange = null,
   embeddedRootId = '',
   embeddedSubmitButtonId = '',
+  disableInitiateCheckoutTracking = false,
 } = {}) => {
   const navigate = useNavigate();
   const { user, authenticated, verifySession } = useAuth();
@@ -557,6 +558,7 @@ const CheckoutPage = ({
   }, [checkoutCartLoading, checkoutItems.length, embedded, navigate]);
 
   useEffect(() => {
+    if (disableInitiateCheckoutTracking) return;
     if (tiktokInitiateCheckoutTrackedRef.current) return;
     if (checkoutCartLoading) return;
     if (checkoutItems.length === 0) return;
@@ -570,6 +572,7 @@ const CheckoutPage = ({
   }, [checkoutCartLoading, checkoutItems, checkoutSubtotal]);
 
   useEffect(() => {
+    if (disableInitiateCheckoutTracking) return;
     if (metaInitiateCheckoutTrackedRef.current) return;
     if (checkoutCartLoading) return;
     if (checkoutItems.length === 0) return;

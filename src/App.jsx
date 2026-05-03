@@ -15,6 +15,8 @@ import CompostGraphicTeeLanding from './pages/CompostGraphicTeeLanding.jsx';
 import CompostTeeCreativePage from './pages/CompostTeeCreativePage.jsx';
 import CompostTeeCreativeCodePage from './pages/CompostTeeCreativeCodePage.jsx';
 import CompostPrideImageOfferPage from './pages/CompostPrideImageOfferPage.jsx';
+import CompostBelieveImageOfferPage from './pages/CompostBelieveImageOfferPage.jsx';
+import CompostPrideV2ImageOfferPage from './pages/CompostPrideV2ImageOfferPage.jsx';
 import CartPage from './pages/CartPage.jsx';
 import CheckoutPage from './pages/CheckoutPage.jsx';
 import OrderConfirmationPage from './pages/OrderConfirmationPage.jsx';
@@ -57,6 +59,8 @@ function App() {
             <Route path="/offer/compost-tee-creative" element={<CompostTeeCreativePage />} />
             <Route path="/offer/compost-tee-code" element={<CompostTeeCreativeCodePage />} />
             <Route path="/offer/compost-pride" element={<CompostPrideImageOfferPage />} />
+            <Route path="/offer/compost-believe" element={<CompostBelieveImageOfferPage />} />
+            <Route path="/offer/compost-pride-v2" element={<CompostPrideV2ImageOfferPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/order-confirmation" element={<OrderConfirmationPage />} />

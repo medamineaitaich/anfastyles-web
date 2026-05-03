@@ -81,6 +81,26 @@ export const trackMetaEvent = (eventName, params) => {
   }
 };
 
+export const trackMetaCustomEvent = (eventName, params) => {
+  if (!initMetaPixel()) return false;
+
+  const fbq = getFbq();
+  if (!fbq) return false;
+
+  try {
+    const cleanedParams = compactObject(params);
+    if (cleanedParams && Object.keys(cleanedParams).length > 0) {
+      fbq('trackCustom', eventName, cleanedParams);
+    } else {
+      fbq('trackCustom', eventName);
+    }
+    return true;
+  } catch (error) {
+    console.warn(`Meta Pixel trackCustom(${eventName}) failed`, error);
+    return false;
+  }
+};
+
 export const trackMetaPageView = () => trackMetaEvent('PageView');
 
 export const getMetaContentId = (source = {}) => {

@@ -10,51 +10,15 @@ import { trackOfferCTA, trackOfferScroll50Once, trackOfferViewContentOnce } from
 import CheckoutPage from '@/pages/CheckoutPage.jsx';
 
 const COMPOST_PRODUCT_ID = 8572;
-const LANDING_SLICES = [
-  {
-    key: 'hero',
-    width: 724,
-    height: 650,
-    eager: true,
-    src: '/offers/compost-pride/slices/hero.png',
-    src1080: '/offers/compost-pride/slices/hero@1080.png',
-  },
-  {
-    key: 'benefits',
-    width: 724,
-    height: 470,
-    eager: false,
-    src: '/offers/compost-pride/slices/benefits.png',
-    src1080: '/offers/compost-pride/slices/benefits@1080.png',
-  },
-  {
-    key: 'comparison',
-    width: 724,
-    height: 420,
-    eager: false,
-    src: '/offers/compost-pride/slices/comparison.png',
-    src1080: '/offers/compost-pride/slices/comparison@1080.png',
-  },
-  {
-    key: 'lifestyle',
-    width: 724,
-    height: 430,
-    eager: false,
-    src: '/offers/compost-pride/slices/lifestyle.png',
-    src1080: '/offers/compost-pride/slices/lifestyle@1080.png',
-  },
-  {
-    key: 'cta',
-    width: 724,
-    height: 202,
-    eager: false,
-    src: '/offers/compost-pride/slices/cta.png',
-    src1080: '/offers/compost-pride/slices/cta@1080.png',
-  },
-];
+const OFFER_SLUG = 'compost-pride-v2';
+const CREATIVE = {
+  src: '/offers/compost-pride-v2/landing.webp',
+  width: 930,
+  height: 6198,
+};
 
-const OFFER_CHECKOUT_ROOT_ID = 'compost-pride-offer-checkout';
-const OFFER_PLACE_ORDER_BUTTON_ID = 'compost-pride-offer-place-order';
+const OFFER_CHECKOUT_ROOT_ID = 'compost-pride-v2-offer-checkout';
+const OFFER_PLACE_ORDER_BUTTON_ID = 'compost-pride-v2-offer-place-order';
 const TEE_THUMBNAIL_FALLBACK = '/offers/compost/compost-white.jpg';
 
 const TEE_THUMBNAIL_BY_COLOR = {
@@ -197,15 +161,15 @@ const resolveTeeThumbnail = (colorValue) => {
   return TEE_THUMBNAIL_BY_COLOR[normalized] || TEE_THUMBNAIL_FALLBACK;
 };
 
-export default function CompostPrideImageOfferPage() {
+export default function CompostPrideV2ImageOfferPage() {
   const purchaseRef = useRef(null);
   const viewContentTrackedRef = useRef(false);
   const initiateCheckoutTrackedRef = useRef(false);
   const scroll50TrackedRef = useRef(false);
+
   const [loading, setLoading] = useState(true);
   const [product, setProduct] = useState(null);
   const [variationEntries, setVariationEntries] = useState([]);
-
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -231,7 +195,7 @@ export default function CompostPrideImageOfferPage() {
 
         setSelectedColor(colors[0] || '');
         setSelectedSize(sizes[0] || '');
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           setProduct(null);
           setVariationEntries([]);
@@ -244,44 +208,6 @@ export default function CompostPrideImageOfferPage() {
     loadProduct();
     return () => { cancelled = true; };
   }, []);
-
-  const ensureInitiateCheckoutTracked = (source = 'unknown') => {
-    if (initiateCheckoutTrackedRef.current) return false;
-    if (!cartOverride?.items || cartOverride.items.length === 0) return false;
-
-    initiateCheckoutTrackedRef.current = true;
-    const value = Number(cartOverride?.subtotal);
-
-    trackMetaInitiateCheckout({
-      items: cartOverride.items,
-      ...(Number.isFinite(value) ? { value } : {}),
-      currency: 'USD',
-    });
-
-    trackTikTokInitiateCheckout({
-      items: cartOverride.items,
-      ...(Number.isFinite(value) ? { value } : {}),
-      currency: 'USD',
-    });
-
-    return true;
-  };
-
-  const scrollToPurchase = (ctaLabel = '') => {
-    if (ctaLabel) {
-      trackOfferCTA({
-        offerSlug: 'compost-pride',
-        ctaLabel,
-        productId: COMPOST_PRODUCT_ID,
-        contentName: product?.name || 'Compost Graphic Tee',
-        value: displayPrice || undefined,
-        currency: 'USD',
-      });
-    }
-
-    purchaseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    ensureInitiateCheckoutTracked('cta');
-  };
 
   const colors = useMemo(() => uniqueNonEmpty(variationEntries.map((entry) => entry.color)), [variationEntries]);
   const sizes = useMemo(() => uniqueNonEmpty(variationEntries.map((entry) => entry.size)), [variationEntries]);
@@ -321,6 +247,44 @@ export default function CompostPrideImageOfferPage() {
     };
   }, [product, selectedVariation?.id, displayPrice, quantity, selectedColor, selectedSize]);
 
+  const ensureInitiateCheckoutTracked = () => {
+    if (initiateCheckoutTrackedRef.current) return false;
+    if (!cartOverride?.items || cartOverride.items.length === 0) return false;
+
+    initiateCheckoutTrackedRef.current = true;
+    const value = Number(cartOverride?.subtotal);
+
+    trackMetaInitiateCheckout({
+      items: cartOverride.items,
+      ...(Number.isFinite(value) ? { value } : {}),
+      currency: 'USD',
+    });
+
+    trackTikTokInitiateCheckout({
+      items: cartOverride.items,
+      ...(Number.isFinite(value) ? { value } : {}),
+      currency: 'USD',
+    });
+
+    return true;
+  };
+
+  const scrollToPurchase = (ctaLabel = '') => {
+    if (ctaLabel) {
+      trackOfferCTA({
+        offerSlug: OFFER_SLUG,
+        ctaLabel,
+        productId: COMPOST_PRODUCT_ID,
+        contentName: product?.name || 'Compost Graphic Tee',
+        value: displayPrice || undefined,
+        currency: 'USD',
+      });
+    }
+
+    purchaseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    ensureInitiateCheckoutTracked();
+  };
+
   useEffect(() => {
     if (loading) return;
     if (!displayPrice || displayPrice <= 0) return;
@@ -340,7 +304,7 @@ export default function CompostPrideImageOfferPage() {
     const target = purchaseRef.current;
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
-        ensureInitiateCheckoutTracked('visible');
+        ensureInitiateCheckoutTracked();
       }
     }, { threshold: 0.15 });
 
@@ -358,7 +322,7 @@ export default function CompostPrideImageOfferPage() {
 
       trackOfferScroll50Once({
         trackedRef: scroll50TrackedRef,
-        offerSlug: 'compost-pride',
+        offerSlug: OFFER_SLUG,
         productId: COMPOST_PRODUCT_ID,
         contentName: product?.name || 'Compost Graphic Tee',
         value: displayPrice || undefined,
@@ -376,28 +340,24 @@ export default function CompostPrideImageOfferPage() {
       <Helmet>
         <title>Compost Pride Offer</title>
         <meta name="description" content="Compost Graphic Tee offer" />
+        <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
       <main className="bg-background overflow-x-hidden">
-        <div className="w-full bg-[#f6f1e7]">
-          <div className="relative mx-auto w-full max-w-[724px]">
-            {LANDING_SLICES.map((slice) => (
-              <img
-                key={slice.key}
-                src={slice.src}
-                srcSet={`${slice.src} ${slice.width}w, ${slice.src1080} 1080w`}
-                sizes="(max-width: 724px) 100vw, 724px"
-                width={slice.width}
-                height={slice.height}
-                alt="Compost Graphic Tee offer creative"
-                className="block h-auto w-full"
-                loading={slice.eager ? 'eager' : 'lazy'}
-                decoding={slice.eager ? 'sync' : 'async'}
-                fetchPriority={slice.eager ? 'high' : 'auto'}
-              />
-            ))}
+        <div className="w-full bg-[#2b2a21]">
+          <div className="relative mx-auto w-full max-w-[930px]">
+            <img
+              src={CREATIVE.src}
+              width={CREATIVE.width}
+              height={CREATIVE.height}
+              alt="Compost Graphic Tee offer creative"
+              className="block h-auto w-full"
+              loading="eager"
+              decoding="sync"
+              fetchPriority="high"
+            />
 
-            {/* Transparent click overlays for the visible SHOP NOW buttons in the creative. */}
+            {/* CTA overlays (transparent) */}
             <button
               type="button"
               onClick={() => scrollToPurchase('Shop Now (Hero)')}
@@ -405,9 +365,23 @@ export default function CompostPrideImageOfferPage() {
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
                 left: '7%',
-                top: '16.5%',
+                top: '16.1%',
                 width: '46%',
-                height: '4.8%',
+                height: '2.3%',
+                background: 'transparent',
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => scrollToPurchase('Order Now (Mid)')}
+              aria-label="Order the Compost Graphic Tee"
+              className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              style={{
+                left: '28%',
+                top: '56.7%',
+                width: '44%',
+                height: '2.2%',
                 background: 'transparent',
               }}
             />
@@ -418,17 +392,16 @@ export default function CompostPrideImageOfferPage() {
               aria-label="Shop the Compost Graphic Tee"
               className="absolute rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               style={{
-                left: '7%',
-                top: '94.3%',
+                left: '12%',
+                top: '90.8%',
                 width: '52%',
-                height: '5.6%',
+                height: '2.3%',
                 background: 'transparent',
               }}
             />
           </div>
         </div>
 
-        {/* Purchase / checkout section (minimal, no extra marketing sections). */}
         <section ref={purchaseRef} className="py-10 pb-24">
           <div className="container-custom max-w-3xl">
             <div className="flex items-end justify-between gap-4">
@@ -437,20 +410,27 @@ export default function CompostPrideImageOfferPage() {
                   {product?.name || 'Compost Graphic Tee'}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Choose color, size, and quantity—then complete checkout below.
+                  Choose your color, size, and quantity, then checkout securely.
                 </p>
               </div>
-              <p className="text-2xl font-bold font-variant-tabular">${displayPrice.toFixed(2)}</p>
+              <div className="text-right">
+                {loading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <p className="text-2xl font-bold">${Number(displayPrice || 0).toFixed(2)}</p>
+                )}
+              </div>
             </div>
 
             {loading ? (
-              <div className="mt-6 space-y-4">
-                <Skeleton className="h-32 w-full rounded-2xl" />
-                <Skeleton className="h-64 w-full rounded-2xl" />
+              <div className="mt-8 space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
               </div>
             ) : (
               <>
-                <div className="mt-6 space-y-6">
+                <div className="mt-8 rounded-3xl border border-border bg-background p-6 shadow-sm">
                   <div className="grid gap-6 sm:grid-cols-2">
                     <div>
                       <p className="text-sm font-semibold">Color</p>
@@ -482,7 +462,9 @@ export default function CompostPrideImageOfferPage() {
                         {sizes.map((size) => {
                           const label = formatOptionLabel(size);
                           const isActive = normalizeOptionValue(selectedSize) === size;
-                          const isAvailable = variationEntries.some((entry) => entry.size === size && entry.color === normalizeOptionValue(selectedColor) && entry.inStock);
+                          const isAvailable = variationEntries.some(
+                            (entry) => entry.size === size && entry.color === normalizeOptionValue(selectedColor) && entry.inStock
+                          );
 
                           return (
                             <button
@@ -529,10 +511,11 @@ export default function CompostPrideImageOfferPage() {
                   </div>
 
                   <Button
-                    className="w-full"
+                    className="mt-6 w-full"
                     size="lg"
                     disabled={!canPurchase}
                     onClick={() => {
+                      ensureInitiateCheckoutTracked();
                       const el = document.getElementById(OFFER_CHECKOUT_ROOT_ID);
                       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
